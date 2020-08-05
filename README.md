@@ -1,3 +1,4 @@
+[![Anaconda-Server Badge](https://anaconda.org/dbankmann/pygelda/badges/version.svg)](https://anaconda.org/dbankmann/pygelda) [![Anaconda-Server Badge](https://anaconda.org/dbankmann/pygelda/badges/latest_release_date.svg)](https://anaconda.org/dbankmann/pygelda)
 # Summary
 pygelda is a python interface for the FORTRAN solver GELDA. The interface is currently in alpha state and only supports strangeness-free problems.
 
