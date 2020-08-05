@@ -3,7 +3,7 @@ pygelda is a python interface for the FORTRAN solver GELDA. The interface is cur
 
 See `help(pygelda.Gelda)` for rudimentary help on the interface.
 
-pygelda ships with the current version of GELDA v1.1.1, for which the license in `GELDA/LICENSE` applies.
+pygelda ships with the current version of GELDA v1.1.1, for which the license in `GELDA/LICENSE` applies. It is available from https://doi.org/10.1137/S1064827595286347.
 
 # Installation
 
