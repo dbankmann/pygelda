@@ -1,0 +1,52 @@
+package:
+  name: pygelda
+  version: {{ environ.get('GIT_DESCRIBE_TAG', 'v0.1.0')[1:] }}
+
+source:
+  git_url: ../
+
+build:
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+  string: py{{ environ.get('PY_VER').replace('.', '') }}{{ environ.get('GIT_DESCRIBE_HASH', '') }}_mkl_{{ environ.get('GIT_DESCRIBE_NUMBER', 0) }}
+
+requirements:
+  build:
+    - python {{PY_VER}}
+    - numpy
+    - mkl
+    - {{ compiler('fortran') }} # [linux]
+    - libgfortran
+    - blas
+    - blas-devel
+    - libblas
+    - liblapack
+
+  host:
+    - python {{ PY_VER }}
+    - numpy
+    - mkl
+    - libgcc-ng      # [linux]
+    - blas
+    - blas-devel
+    - libblas
+    - liblapack
+
+  run:
+    - python {{ PY_VER }}
+    - {{ pin_compatible('numpy') }}
+    - mkl
+    - libgcc-ng      # [linux]
+
+
+
+
+test:
+  requires:
+    - python {{PY_VER}}
+    - pytest
+  imports:
+    - pygelda
+
+about:
+  license:  GPL
+  summary: 'Wrapper for the FORTRAN code GELDA. Solves linear time-varying differential-algebraic equations'

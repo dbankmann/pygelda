@@ -1,0 +1,55 @@
+#
+#  GELDA make include file.                                        
+#  Version 1.1.1 (Linux)
+#  October 12, 1995
+#
+#  Tested on 486er and Pentium PCs with Linux 1.2.X, gcc 2.6.3, f2c
+#  with libf2c.so.0.10 and the perl script fort77 Version 1.6.
+
+
+#----------------------------------------------------------------------
+#  YOU MUST EDIT THE FOLLOWING LINES 
+#----------------------------------------------------------------------
+
+#  Modify the FORTRAN and OPTS definitions to refer to the
+#  compiler and desired compiler options for your machine.  NOOPT
+#  refers to the compiler options desired when NO OPTIMIZATION is
+#  selected.  Define LOADER and LOADOPTS to refer to the loader and 
+#  desired load options for your machine.
+#
+FORTRAN  = fort77
+FCOPTS   = -O -u
+NOOPT    = -u
+LOADER   = fort77
+LOADOPTS = 
+#
+#  The archiver and the flag(s) to use when building archive (library)
+#  If you system has no ranlib, set RANLIB = echo.
+#
+ARCH     = ar
+ARCHFLAGS= cr
+RANLIB   = ranlib
+#
+#  LaTeX
+#
+LATEX	     = latex
+#
+#  The location of the libraries to which you will link.  (The 
+#  machine-specific, optimized BLAS library should be used whenever
+#  possible.)
+#
+BLASLIB	= ./blas.a
+#BLASLIB = -lblas
+LAPACKLIB = ./lapack.a
+#LAPACKLIB = -llapack
+#  
+#  The source file for the timing code. Furthermore, the compiler, the options
+#  and libraries you need to compile and link with the timing code. 
+#
+TIMESRC = dsecnd.c
+TIMECOMP = gcc
+TIMEOPTS = 
+TIMELIB = 
+
+
+

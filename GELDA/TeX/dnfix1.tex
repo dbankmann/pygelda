@@ -1,0 +1,373 @@
+\documentstyle[dgelda,a4wide]{article}
+
+\begin{document}
+
+\begin{center}
+  {\bf DNFIX1 --- Library Routine Document (Version 1.1)}
+\end{center}
+
+\section{Purpose}
+
+DNFPEN is part of the code DGELDA \cite{KunMRW95} which solves linear
+DAEs with variable coefficients of the form
+\begin{eqnarray*}
+  E(t)\dot{x}(t) &=& A(t)x(t) + f(t)\\
+  x(t_0) &=& x_0.
+\end{eqnarray*}
+
+DNFIX1 performs the following steps:
+
+\begin{enumerate}
+\item Compute the strangeness index $\mu$ and the other characteristic
+  values of the matrix pair $(E(t), A(t))$ and time T.
+\item Compute the matricies $EQ, AQ$ und the vector $FQ$ of the extended
+  derivative array of stage $\mu$ at time T.
+\item Check if the strangeness index and the other characteristic values
+  have changed.
+\item Compute the coefficients of an equivalent starngeness free DAE
+  at time T. The two DAEs are equivalent in the sense that their
+  solutions are identical.
+\end{enumerate}
+
+\section{Specification}
+
+\begin{verbatim}
+      SUBROUTINE DNFIX1(EDIF, ADIF, FDIF, N, T, LMAX, M, ID, IA, IU,
+     $                  IREQ, MQ, IDQ, IAQ, IUQ, E, LDE, A, LDA, F,
+     $                  EQ, LDEQ, AQ, LDAQ, FQ, Z1, LDZ1, Z2Q, LDZ2Q,
+     $                  AH,LDAH, IPAR, RPAR, RWORK, LRWORK, MCONST,
+     $                  IERR)
+      EXTERNAL         EDIF, ADIF, FDIF
+      DOUBLE PRECISION T
+      INTEGER          IERR, ID, IA, IU, IDQ, IAQ, IUQ, IREQ,
+     $                 LDA, LDAH, LDAQ, LDE, LDEQ, LDZ1, LDZ2Q,
+     $                 LMAX, LRWORK, M, MQ, N
+      LOGICAL          MCONST
+      DOUBLE PRECISION A(LDA,*), AH(LDAH,*),
+     $                 AQ(LDAQ,*), E(LDE,*), EQ(LDEQ,*),
+     $                 F(*), FQ(*), RPAR(*), RWORK(*),
+     $                 Z1(LDZ1,*), Z2Q(LDZ2Q,*)
+      INTEGER          IPAR(*)
+\end{verbatim}
+
+\section{Argument List}
+
+\subsection{User--supplied Subroutines}
+
+\begin{entry}{EDIF}{User--supplied function}
+  This is a subroutine which the user provides to define the matrix $E(t)$
+  and its derivatives. It has the form
+  \begin{center}
+    SUBROUTINE EDIF(N,T,IDIF,E,LDE,IPAR,RPAR,IERR).
+  \end{center}
+  The subroutine takes as input the number of equations N, the time T
+  and the integer parameter IDIF. EDIF must not alter these input
+  parameters or the leading dimension LDE of the array E. As output,
+  the subroutine produces the IDIF-th derivative of $E(t)$ at time T
+  in the leading N by N part of the array E. The integer flag IERR is
+  always zero on input and EDIF should alter IERR only if IDIF is
+  larger than the highest derivative of $E(t)$ the subroutine provides
+  (set $\mbox{IERR}=-2$) or if another problem occurs (set
+  $\mbox{IERR}=-1$). IPAR and RPAR are integer and real arrays which
+  can be used for the communication between the user's calling program
+  and the subroutines EDIF, ADIF and FDIF.
+
+  In the calling program, EDIF must be declared as external.
+\end{entry}
+\begin{entry}{ADIF}{User--supplied function}
+  This is a subroutine which the user provides to define the matrix $A(t)$
+  and its derivatives. It is of the form
+  \begin{center}
+    SUBROUTINE ADIF(N,T,IDIF,A,LDA,IPAR,RPAR,IERR)
+  \end{center}
+  and the input and output parameters are similar to these of EDIF.
+\end{entry}
+
+\begin{entry}{FDIF}{User--supplied function}
+  This is a subroutine which the user provides to define the vector $f(t)$
+  and its derivatives. It is of the form
+  \begin{center}
+    SUBROUTINE FDIF(N,T,IDIF,F,IPAR,RPAR,IERR)
+  \end{center}
+  and the input and output parameters are similar to these of
+  EDIF. Except that the first N elements of the 1-dimensional array F
+  contain the IDIF-th derivative of $f(t)$ at time T. Note further,
+  since F is a 1-dimensional array no leading dimension is needed.
+\end{entry}
+
+\subsection{Arguments In}
+
+\begin{entry}{N}{INTEGER}
+  The number of equations in the DAE system. \\
+  N $\ge$ 1.
+\end{entry}
+
+\begin{entry}{T}{DOUBLE PRECISION}
+  The time T.
+\end{entry}
+
+\begin{entry}{LMAX}{INTEGER}
+  The maximal strangeness index.\\
+  LMAX $\ge$ 1.
+\end{entry}
+
+\begin{entry}{M}{INTEGER}
+  The strangeness index $\mu$ of the DAE.
+\end{entry}
+
+\begin{entry}{ID}{INTEGER}
+  The number $d_{\mu}$ of differential components at the previous step.
+\end{entry}
+
+\begin{entry}{IA}{INTEGER}
+  The number $a_{\mu}$ of algebraic components at the previous step.
+\end{entry}
+
+\begin{entry}{IU}{INTEGER}
+  The number $u_{\mu}$ of undetermined components at the previous step.
+\end{entry}
+
+\begin{entry}{IREQ}{INTEGER}
+  The rank of $EQ$ at the previous step .
+\end{entry}
+
+\begin{entry}{LDE}{INTEGER}
+  The leading dimension of array E as declared in the calling program.\\
+  LDEQ $\ge $ N.
+\end{entry}
+
+\begin{entry}{LDA}{INTEGER}
+  The leading dimension of array A as declared in the calling program.\\
+  LDA $\ge$ N.
+\end{entry}
+
+\begin{entry}{LDEQ}{INTEGER}
+  The leading dimension of array EQ as declared in the calling
+  program. \\
+  LDEQ $\ge$ (LMAX+1) N.
+\end{entry}
+
+\begin{entry}{LDAQ}{INTEGER}
+  The leading dimension of array AQ as declared in the calling
+  program.\\
+  LDAQ $\ge$ (LMAX+1) N.
+\end{entry}
+
+\begin{entry}{LDZ1}{INTEGER}
+  The leading dimension of array Z1 as declared in the calling
+  program.\\
+  LDZ1 $\ge$ N.
+\end{entry}
+
+\begin{entry}{LDZ2Q}{INTEGER}
+  The leading dimension of array Z2Q as declared in the calling
+  program.\\
+  LDZ2Q $\ge$ (LMAX+1) N.
+\end{entry}
+
+\begin{entry}{LDAH}{INTEGER}
+  The leading dimension of array AH as declared in the calling
+  program.\\
+  LDAH $\ge$ (LMAX+1) N.
+\end{entry}
+
+\subsection{Arguments Out}
+
+\begin{entry}{IREQ}{INTEGER}
+  The rank of $EQ$ at time T.
+\end{entry}
+
+\begin{entry}{MQ}{INTEGER}
+  The strangeness index $\mu$ of the DAE at time T.
+\end{entry}
+\begin{entry}{IDQ}{INTEGER}
+  The number $d_{\mu}$ of differential components at time T.
+\end{entry}
+
+\begin{entry}{IAQ}{INTEGER}
+  The number $a_{\mu}$ of algebraic  components at time T.
+\end{entry}
+
+\begin{entry}{IUQ}{INTEGER}
+  The number $u_{\mu}$ of undetermined components at time T.
+\end{entry}
+
+\begin{entry}{E}{DOUBLE PRECISION array of DIMENSION (LDE,*)}
+  The leading N by N part of this array contains the matrix
+  $E$ of the strangeness free DAE at time T.
+\end{entry}
+
+\begin{entry}{A}{DOUBLE PRECISION array of DIMENSION (LDA,*)}
+  The leading N by N part of this array contains the matrix
+  $A$ of the strangeness free DAE at time T.
+\end{entry}
+
+\begin{entry}{F}{DOUBLE PRECISION array of DIMENSION (*)}
+  The leading N elemnts of this array contain the vector $F$ of the
+  strangeness free DAE at time T.
+\end{entry}
+
+\begin{entry}{EQ}{DOUBLE PRECISION array of DIMENSION (LDEQ,*)}
+  The leading N(MD+1) by N(MD+1) part of this array contains the
+  matrix $EQ$ of stage MD at time T.
+\end{entry}
+
+\begin{entry}{AQ}{DOUBLE PRECISION array of DIMENSION (LDAQ,*)}
+  The leading N(MD+1) by N(MD+1) part of this array contains the
+  matrix $AQ$ of stage MD at time T.
+\end{entry}
+
+\begin{entry}{FQ}{DOUBLE PRECISION array of DIMENSION (*)}
+  The leading N(MD+1) elemnts of this array contain vector contain the
+  vector $FQ$ of stage MQ at time T.
+\end{entry}
+
+\begin{entry}{Z1}{DOUBLE PRECISION array of DIMENSION (LDZ1,*)}
+  The leading N by N part of this array contains the transformation
+  matrix Z1 which extracts the differential part.
+\end{entry}
+
+\begin{entry}{Z2Q}{DOUBLE PRECISION array of DIMENSION (LDZ2Q,*)}
+  The leading N(MD+1) by IAQ part of this array contains the
+  transformation matrix Z2Q which extracts the algebraic part.
+\end{entry}
+
+\begin{entry}{AH}{DOUBLE PRECISION array of DIMENSION (LDAH,*)}
+  This array is used as workarray.
+\end{entry}
+
+\begin{entry}{IPAR}{INTEGER array of DIMENSION (*)}
+  This integer array can be used for communication between the calling
+  programm and the EDIF, ADIF and FDIF subroutines.
+\end{entry}
+
+\begin{entry}{RPAR}{DOUBLE PRECISION array of DIMENSION (*)}
+  This real array can be used for communication between the calling
+  programm and the EDIF, ADIF and FDIF subroutines.
+
+  IPAR and RPAR are not altered by DNFIND. If these arrays are used,
+  they must be dimensioned in the calling program and in EDIF, ADIF
+  and FDIF as arrays of appropriate length. Otherwise, ignore these
+  arrays by treating them as dummy arrays of length one.
+\end{entry}
+
+\subsection{Workspace}
+\noindent
+{\bf RWORK -- {DOUBLE PRECISION array of DIMENSION at least (LRWORK)}.}
+\medskip
+
+\begin{entry}{LRWORK}{INTEGER}
+  The the length RWORK.
+
+  LRWORK $\ge 3 \mbox{((LMAX+1)N)}^2 + 6 \mbox{(LMAX+1)N}$.
+
+  For good performance, LRWORK should generally be larger.
+\end{entry}
+
+\subsection{Tolerances}
+None.
+
+\subsection{Mode Parameters}
+
+\begin{entry}{MCONST}{LOGICAL}
+  Indicates whether the matricies $E(t)$ and $A(t)$ or constant as
+  follows:
+  \begin{description}
+  \item[MCONST=.TRUE.] $E(t)$ and $A(t)$ are both constant matricies;
+  \item[MCONST=.FLASE] $E(t)$ or $A(t)$ is a time dependent matrix.
+  \end{description}
+\end{entry}
+
+\subsection{Warning Indicator}
+None.
+
+\subsection{Error Indicator}
+
+\begin{entry}{IERR}{INTEGER}
+  Unless the routine detects an error (see next section), IERR
+  contains $0$ on exit.
+\end{entry}
+
+\section{Warnings and Errors detected by the Routine}
+
+\ierr{-1}{An error occured in EDIF, ADIF or FDIF.}
+\ierr{-2}{The input parameter IDIF of EDIF, ADIF or FDIF was
+  larger then the highest derivative the routine provides.}
+\ierr{-22}{Failed to determine strangeness index.}
+\ierr{-23}{Failed to compute an equivalent strangeness index $0$
+  system.}
+\ierr{-26}{Unable to continue due to a change in characteristic
+  values.}
+
+\section{Method}
+If we denote the
+$i$-th derivative by a $\mbox{superscript}^{(i)}$ then EQ, AQ and
+FQ of stage $L$ are defined componentwise by
+
+\begin{eqnarray*}
+  (EQ)_{ij} &:=& {i \choose j} E^{(i-j)}(t)
+  - {i \choose j+1}A^{(i-j-1)}(t),\ i,j=0,\dots,L \\
+  (AQ)_{ij} &:=& \left\{
+    \begin{array}{cl}
+      A^{(i)}(t) & \mbox{for } i=0,\dots,L,\ j=0 \\
+      0          & \mbox{otherwise}
+    \end{array}
+  \right. \\
+  (FQ)_i &:=& f^{(i)}(t),\ i=0,\dots,L
+\end{eqnarray*}
+
+The characteristic values of the matrix pair (EQ,AQ) of stage $L$ are
+defined by
+
+\begin{eqnarray*}
+  r_L &=& \rank EQ \\
+  a_L &=& \rank (Z^* AQ\ T) \\
+  s_L &=& \rank (V^* Z^* AQ\ T') \\
+  d_L &=& r_L - s_L \\
+  u_L &=& N - r_L - a_L - s_L
+\end{eqnarray*}
+where
+
+\begin{eqnarray*}
+    T &&\mbox {\rm basis of }\kernel EQ\\
+    Z &&\mbox{\rm basis of }\corange EQ=\kernel EQ^* \\
+    T' &&\mbox{\rm basis of }\cokernel EQ=\range EQ^*\\
+    V &&\mbox{\rm basis of }\corange (Z^*AQ\ T).
+\end{eqnarray*}
+
+Recursive formulas are used to compute the strangeness index $\mu$ and
+the characteristics of the original pair $(E(t), A(t))$ at time T in
+terms of the above values.
+
+All information we need to compute the strangeness free DAE is hidden
+in the extended derivative array $EQ$, $AQ$ anf $FQ$.
+
+\section{References}
+
+\begin{thebibliography}{1}
+\bibitem{KunM92}
+P.~Kunkel and V.~Mehrmann.
+\newblock A new class of discretization methods for the solution of linear
+  differential-algebraic equations.
+\newblock Materialien LXII , FSP Mathematisierung, Universit{\"a}t Bielefeld,
+  1992.
+\newblock To appear in SIAM J. Numer. Anal.
+
+\bibitem{KunMRW95}
+P.~Kunkel, V.~Mehrmann, W.~Rath, and J.~Weickert.
+\newblock {GELDA}: A software package for the solution of general linear
+  differential algebraic equations.
+\newblock Preprint SPC 95\_8, TU Chemnitz-Zwickau, February 1995.
+
+\end{thebibliography}
+
+%\section{Numerical Aspects}
+
+
+%\section{Further Comments}
+
+\end{document}
+% Local Variables:
+% mode: latex
+% TeX-master: t
+% End:

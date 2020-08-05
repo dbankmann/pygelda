@@ -1,0 +1,201 @@
+\documentstyle[dgelda,a4wide]{article}
+
+\begin{document}
+
+\begin{center}
+  {\bf DNFOTR --- Library Routine Document (Version 1.1)}
+\end{center}
+
+\section{Purpose}
+
+DNFOTR is part of the code DGELDA \cite{KunMRW95} which solves linear
+DAEs with variable coefficients of the form 
+\begin{eqnarray*}
+  E(t)\dot{x}(t) &=& A(t)x(t) + f(t)\\
+  x(t_0) &=& x_0.
+\end{eqnarray*}
+
+DNFOTR computes the (local) orthogonal transoformations which extract a
+strangeness free DAE from the extended derivative array at a fixed
+time. 
+ 
+\section{Specification}
+
+\begin{verbatim}
+      SUBROUTINE DNFOTR(N, NQ, ID, IA, IREQ, EQ, LDEQ, AQ, LDAQ, Z2Q,
+     $                  LDZ2Q, Z1, LDZ1, AH, LDAH, RWORK, LRWORK, IERR) 
+      INTEGER          IA, ID, IERR, IREQ, IU, LDEQ, LDAH, LDAQ, LDZ1, 
+     $                 LDZ2Q, LRWORK, N, NQ
+      DOUBLE PRECISION EQ(LDEQ,NQ), AH(LDAH,NQ), AQ(LDAQ,NQ), RWORK(*), 
+     $                 Z1(LDZ1,N), Z2Q(LDZ2Q,NQ)
+\end{verbatim}
+
+\section{Argument List}
+
+\subsection{Arguments In}
+
+\begin{entry}{N}{INTEGER}
+  The number of equations in the DAE system. \\
+  N $\ge$ 1.
+\end{entry}
+
+\begin{entry}{NQ}{INTEGER}
+  The size of EQ and AQ, i.e. NQ = ($\mu$+1)N, where $\mu$ is
+  the strangeness index of the DAE. \\
+  NQ  $\ge$ 1.
+\end{entry}
+
+\begin{entry}{ID}{INTEGER}
+  The number $d_{\mu}$ of differential components.
+\end{entry}
+
+\begin{entry}{IA}{INTEGER}
+  The number $a_{\mu}$ of algebraic components. 
+\end{entry}
+
+\begin{entry}{IU}{INTEGER}
+  The number $u_{\mu}$ of undetermined components. 
+\end{entry}
+
+\begin{entry}{IREQ}{INTEGER}
+  The rank of the matrix $EQ$.
+\end{entry}
+
+\begin{entry}{EQ}{DOUBLE PRECISION array of DIMENSION (LDEQ,*)}
+  The leading NQ by NQ part of this array contains the
+  matrix $EQ$.
+\end{entry}
+
+\begin{entry}{LDEQ}{INTEGER}
+  The leading dimension of array EQ as declared in the calling program.
+
+  LDEQ $\ge $ NQ.
+\end{entry}
+
+\begin{entry}{AQ}{DOUBLE PRECISION array of DIMENSION (LDAQ,*)}
+  The leading NQ by NQ part of this array contains the
+  matrix $AQ$.
+\end{entry}
+
+\begin{entry}{LDAQ}{INTEGER}
+  The leading dimension of array AQ as declared in the calling program.
+
+  LDAQ $\ge$ NQ.
+\end{entry}
+
+\begin{entry}{Z2Q}{DOUBLE PRECISION array of DIMENSION (LDZ2Q,*)}
+  The leading NQ by NQ part of this array must contain the
+  right orthogonal factor of the SVD $EQ = ZQ\ \Sigma\ V^T$.\\
+  {\bf Note:} this array is overwritten.
+\end{entry}
+
+\begin{entry}{LDZ2Q}{INTEGER}
+  The leading dimension of array Z2Q as declared in the calling program.
+
+  LDZ2Q $\ge$ NQ.
+\end{entry}
+
+\begin{entry}{LDZ1}{INTEGER}
+  The leading dimension of array Z1 as declared in the calling program.
+
+  LDZ1 $\ge$ N.
+\end{entry}
+
+\begin{entry}{LDAH}{INTEGER}
+  The leading dimension of array AH as declared in the calling program.
+
+  LDAH $\ge$ NQ.
+\end{entry}
+
+\subsection{Arguments Out}
+
+\begin{entry}{Z2Q}{DOUBLE PRECISION array of DIMENSION (LDZ2Q,*)}
+  The leading NQ by IA part of this array contains the
+  transformation matrix Z2Q which extracts the algebraic part. 
+\end{entry}
+
+\begin{entry}{Z1}{DOUBLE PRECISION array of DIMENSION (LDZ1,*)}
+  The leading N by ID part of this array contains the
+  transformation matrix Z1 which extracts the differential part. 
+\end{entry}
+
+\begin{entry}{ZAH}{DOUBLE PRECISION array of DIMENSION (LDAH,*)}
+  This array is used as workarray.
+\end{entry}
+
+\subsection{Workspace}
+\noindent
+{\bf RWORK -- {DOUBLE PRECISION array of DIMENSION (see LRWORK)}.}
+\medskip
+
+\begin{entry}{LRWORK}{INTEGER}
+  The dimension of workspace array RWORK. 
+
+  LRWORK $\ge 3\mbox{N} + 2\mbox{NQ} + 2\mbox{NQ}^2$.
+
+  For good performance, LRWORK should generally be larger.
+\end{entry}
+
+\subsection{Tolerances}
+None.
+
+\subsection{Mode Parameters}
+None.
+
+\subsection{Warning Indicator}
+None.
+
+\subsection{Error Indicator}
+
+\begin{entry}{IERR}{INTEGER}
+  Unless the routine detects an error (see next section), IERR
+  contains $0$ on exit.
+\end{entry}
+
+\section{Warnings and Errors detected by the Routine}
+
+\ierr{-3}{An argument of DGESVD had an illegal value.}
+\ierr{-4}{DGESVD failed to converge.}
+\ierr{-5}{LRWORK $< 3\mbox{N} + 2\mbox{NQ} + 2\mbox{NQ}^2$.}
+
+\section{Method}
+
+All information we need to transform the original DAE is hidden in the
+extended derivative array EQ, AQ anf FQ. The two orthogonal transformation
+matricies Z1 and Z2Q are computed via two singular value
+decompositions (SVDs). The LAPACK subroutine DGESVD is used to compute
+these SVDs. 
+
+\section{References}
+
+\begin{thebibliography}{1}
+\bibitem{KunM92}
+P.~Kunkel and V.~Mehrmann.
+\newblock A new class of discretization methods for the solution of linear
+  differential-algebraic equations.
+\newblock Materialien LXII , FSP Mathematisierung, Universit{\"a}t Bielefeld,
+  1992.
+\newblock To appear in SIAM J. Numer. Anal.
+
+\bibitem{KunMRW95}
+P.~Kunkel, V.~Mehrmann, W.~Rath, and J.~Weickert.
+\newblock {GELDA}: A software package for the solution of general linear
+  differential algebraic equations.
+\newblock Preprint SPC 95\_8, TU Chemnitz-Zwickau, February 1995.
+
+\end{thebibliography}
+
+%\section{Numerical Aspects}
+
+%\section{Further Comments}
+
+\end{document}
+% Local Variables: 
+% mode: latex
+% TeX-master: t
+% End: 
+
+
+
+
+

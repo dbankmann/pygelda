@@ -1,0 +1,198 @@
+\documentstyle[dgelda,a4wide]{article}
+
+\begin{document}
+
+\begin{center}
+  {\bf DNFVAL ---  Library Routine Document (Version 1.1)}
+\end{center}
+
+\section{Purpose}
+
+This code is part of the code DGELDA \cite{KunMRW95 }which solves
+linear DAEs with variable coefficients of the form 
+
+\begin{eqnarray*}
+  E(t)\dot{x}(t) &=& A(t)x(t) + f(t)\\
+  x(t_0) &=& x_0.
+\end{eqnarray*}
+
+DNFVAL computes the characteristic values of a matrix pair $(EQ, AQ)$
+and the right orthogonal factor ZQ of the SVD $EQ = ZQ\ \Sigma\ V^T$.
+
+\section{Specification}
+
+\begin{verbatim}
+      SUBROUTINE DNFVAL(N, NQ, COND, EQ, LDEQ, AQ, LDAQ, R0, A0, S0, D0,
+     $                  U0, ZQ, LDZQ, RWORK, LRWORK, IERR)
+      DOUBLE PRECISION COND
+      INTEGER          A0, D0, IERR, LDE, LDA, LDZQ, LRWORK, N, 
+     $                 R0, S0, U0 
+      DOUBLE PRECISION A(LDA,*), E(LDE,*), RWORK(*), ZQ(LDZQ,*)
+\end{verbatim}
+
+\section{Argument List}
+
+\subsection{Arguments In}
+
+\begin{entry}{N}{INTEGER}
+  The number of equations of the original DAE.\\
+  N $\ge$ 1.
+\end{entry}
+
+\begin{entry}{NQ}{INTEGER}
+  The size of the square matricies $EQ$ and $AQ$.\\
+  NQ $\ge$ N.
+\end{entry}
+
+\begin{entry}{EQ}{DOUBLE PRECISION array of DIMENSION (LDEQ,*)}
+  The leading NQ by NQ part of this array must contain the matrix $EQ$.
+\end{entry}
+
+\begin{entry}{LDEQ}{INTEGER}
+  The leading dimension of array EQ as declared in the calling
+  program.
+
+  LDEQ $\ge$ NQ.
+\end{entry}
+
+\begin{entry}{AQ}{DOUBLE PRECISION array of DIMENSION (LDAQ,*)}
+  The leading NQ by NQ part of this array must contain the matrix $AQ$.
+\end{entry}
+
+\begin{entry}{LDAQ}{INTEGER}
+  The leading dimension of array AQ as declared in the calling
+  program. 
+
+  LDAQ $\ge$ NQ.
+\end{entry}
+
+\begin{entry}{LDZQ}{INTEGER}
+  The leading dimension of array ZQ as declared in the calling
+  program. 
+
+  LDZQ $\ge$ NQ.
+\end{entry}
+
+\subsection{Arguments Out}
+
+\begin{entry}{R0}{INTEGER}
+  The rank of $EQ$.
+\end{entry}
+
+\begin{entry}{A0}{INTEGER.}
+  The size of the algebraic part.
+\end{entry}
+
+\begin{entry}{S0}{INTEGER}
+  The size of the strangeness part.
+\end{entry}
+
+\begin{entry}{D0}{INTEGER}
+  The size of the differential part.
+\end{entry}
+
+\begin{entry}{U0}{INTEGER}
+  The size of the undetermind part.
+\end{entry}
+
+\begin{entry}{ZQ}{DOUBLE PRECISION array of DIMENSION (LDZQ,*)}
+  The leading NQ by NQ part of this array contains the right
+  orthogonal factor of the SVD $EQ = ZQ\ \Sigma\ V^T$. 
+\end{entry}
+
+\subsection{Workspace}
+
+\noindent
+{\bf RWORK -- {DOUBLE PRECISION array of DIMENSION at least (LRWORK)}.}
+\medskip
+
+\begin{entry}{LRWORK}{INTEGER}
+  The length of RWORK. 
+
+  LRWORK $\ge 3 \mbox{NQ}^2 + 6 \mbox{NQ}$.
+
+  For good performance, LRWORK should generally be larger.
+\end{entry}
+
+\subsection{Tolerances}
+None.
+
+\subsection{Mode Parameters}
+None.
+
+\subsection{Warning Indicator}
+None.
+
+\subsection{Error Indicator}
+
+\begin{entry}{IERR}{INTEGER.}
+  Unless the routine detects an error (see next section), IERR
+  contains 0 on exit. 
+\end{entry}
+
+\section{Warnings and Errors detected by the Routine}
+
+\ierr{-3}{An argument of DGESVD had an illegal value.}
+\ierr{-4}{DGESVD failed to converge.}
+\ierr{-5}{LRWORK $< 3 \mbox{NQ}^2 + 6 \mbox{NQ}$.}
+
+\section{Method}
+
+The characteristic values of a NQ by NQ matrix pair $(EQ, AQ)$ are
+defined by 
+
+\begin{eqnarray*}
+  R0 &=& \rank EQ \\
+  A0 &=& \rank (Z^* AQ T) \\
+  S0 &=& \rank (V^* Z^* AQ T') \\
+  D0 &=& R0 - S0 \\
+  U0 &=& N - R0 - A0 - S0
+\end{eqnarray*}
+where 
+
+\begin{eqnarray*}
+    T &&\mbox {\rm basis of }\kernel EQ\\
+    Z &&\mbox{\rm basis of }\corange EQ=\kernel EQ^* \\
+    T' &&\mbox{\rm basis of }\cokernel EQ=\range EQ^*\\
+    V &&\mbox{\rm basis of }\corange (Z^*AQ\ T).
+\end{eqnarray*}
+
+The characteristic values R0, A0, S0, D0, U0 are computed via three rank
+decisions, which are obtained by means of singular value
+decompositions (SVDs). The LAPACK subroutine DGESVD is used to compute
+these SVDs.  
+
+\section{References}
+
+\begin{thebibliography}{1}
+
+\bibitem{KunM92}
+P.~Kunkel and V.~Mehrmann.
+\newblock A new class of discretization methods for the solution of linear
+  differential-algebraic equations.
+\newblock Materialien LXII , FSP Mathematisierung, Universit{\"a}t Bielefeld,
+  1992.
+\newblock To appear in SIAM J. Numer. Anal.
+
+\bibitem{KunMRW95}
+P.~Kunkel, V.~Mehrmann, W.~Rath, and J.~Weickert.
+\newblock {GELDA}: A software package for the solution of general linear
+  differential algebraic equations.
+\newblock Preprint SPC 95\_8, TU Chemnitz-Zwickau, February 1995.
+
+\end{thebibliography}
+
+%\section{Numerical Aspects}
+
+%\section{Further Comments}
+
+\end{document}
+% Local Variables: 
+% mode: latex
+% TeX-master: t
+% End: 
+
+
+
+
+

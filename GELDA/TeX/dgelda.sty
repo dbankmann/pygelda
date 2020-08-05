@@ -1,0 +1,28 @@
+\newenvironment{entry}[2]%
+{{\bf\noindent #1 -- #2.}\begin{list}{}{}\item[]}%
+{\end{list}}
+
+
+\newcommand{\yesno}[3]{#1 ...
+  \begin{list}{}{\settowidth{\labelwidth}{Yes --}
+      \setlength{\leftmargin}{\labelwidth}
+      \addtolength{\leftmargin}{\labelsep}} 
+  \item[Yes --] #2 
+  \item[No --] #3 
+  \end{list}}
+
+\newcommand{\ierr}[2]{
+  \begin{list}{}{\settowidth{\labelwidth}{IERR = $#1$}
+      \setlength{\leftmargin}{\labelwidth}
+      \addtolength{\leftmargin}{\labelsep}} 
+  \item[IERR = $#1$:] #2
+  \end{list}}
+%
+%%%%% miscellaneous mathematical operations %%%%%
+\newcommand {\rank}     {\mathop{\rm rank}\nolimits}
+\newcommand {\range}    {\mathop{\rm range}\nolimits}
+\newcommand {\corange}  {\mathop{\rm corange}\nolimits}
+\newcommand {\kernel}   {\mathop{\rm kernel}\nolimits}
+\newcommand {\cokernel} {\mathop{\rm cokernel}\nolimits}
+\newcommand {\basis}    {\mathop{\rm basis}\nolimits}
+

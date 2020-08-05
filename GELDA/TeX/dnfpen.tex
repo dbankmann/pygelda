@@ -1,0 +1,241 @@
+\documentstyle[dgelda,a4wide]{article}
+
+\begin{document}
+
+\begin{center}
+  {\bf DNFPEN --- Library Routine Document (Version 1.1)}
+\end{center}
+
+\section{Purpose}
+
+DNFPEN is part of the code DGELDA \cite{KunMRW95} which solves linear
+DAEs with variable coefficients of the form
+\begin{eqnarray*}
+  E(t)\dot{x}(t) &=& A(t)x(t) + f(t)\\
+  x(t_0) &=& x_0.
+\end{eqnarray*}
+
+DNFPEN forms the extended derivative array with the matricies $EQ, AQ$
+and the vector $FQ$.
+
+\section{Specification}
+
+\begin{verbatim}
+      SUBROUTINE DNFPEN(EDIF,ADIF,FDIF,N,T,L,WQ,LDWQ,
+     $                  EQ,LDEQ,AQ,LDAQ,FQ,IPAR,RPAR,IERR)
+      EXTERNAL         ADIF, EDIF, FDIF
+      DOUBLE PRECISION T
+      INTEGER          IERR, L, LDWQ, LDEQ, LDAQ, N
+      DOUBLE PRECISION AQ(LDAQ,*), EQ(LDEQ,*), FQ(*), RPAR(*),
+     $                 WQ(LDWQ,*)
+      INTEGER          IPAR(*)
+\end{verbatim}
+
+\section{Argument List}
+
+\subsection{User--supplied Subroutines}
+
+\begin{entry}{EDIF}{User--supplied function}
+  This is a subroutine which the user provides to define the matrix $E(t)$
+  and its derivatives. It has the form
+  \begin{center}
+    SUBROUTINE EDIF(N,T,IDIF,E,LDE,IPAR,RPAR,IERR).
+  \end{center}
+  The subroutine takes as input the number of equations N, the time T
+  and the integer parameter IDIF. EDIF must not alter these input
+  parameters or the leading dimension LDE of the array E. As output,
+  the subroutine produces the IDIF-th derivative of $E(t)$ at time T
+  in the leading N by N part of the array E. The integer flag IERR is
+  always zero on input and EDIF should alter IERR only if IDIF is
+  larger than the highest derivative of $E(t)$ the subroutine provides
+  (set $\mbox{IERR}=-2$) or if another problem occurs (set
+  $\mbox{IERR}=-1$). IPAR and RPAR are integer and real arrays which
+  can be used for the communication between the user's calling program
+  and the subroutines EDIF, ADIF and FDIF.
+
+  In the calling program, EDIF must be declared as external.
+\end{entry}
+\begin{entry}{ADIF}{User--supplied function}
+  This is a subroutine which the user provides to define the matrix $A(t)$
+  and its derivatives. It is of the form
+  \begin{center}
+    SUBROUTINE ADIF(N,T,IDIF,A,LDA,IPAR,RPAR,IERR)
+  \end{center}
+  and the input and output parameters are similar to these of EDIF.
+\end{entry}
+
+\begin{entry}{FDIF}{User--supplied function}
+  This is a subroutine which the user provides to define the vector $f(t)$
+  and its derivatives. It is of the form
+  \begin{center}
+    SUBROUTINE FDIF(N,T,IDIF,F,IPAR,RPAR,IERR)
+  \end{center}
+  and the input and output parameters are similar to these of
+  EDIF. Except that the first N elements of the 1-dimensional array F
+  contain the IDIF-th derivative of $f(t)$ at time T. Note further,
+  since F is a 1-dimensional array no leading dimension is needed.
+\end{entry}
+
+\subsection{Arguments In}
+
+\begin{entry}{N}{INTEGER}
+  The number of equations in the DAE system. \\
+  N $\ge$ 1.
+\end{entry}
+
+\begin{entry}{T}{DOUBLE PRECISION}
+  The time T.
+\end{entry}
+
+\begin{entry}{L}{INTERGER}
+  The stage of the extended derivative array to be computed.
+\end{entry}
+
+\begin{entry}{WQ}{DOUBLE PRECISION array of DIMENSION (LDWQ,*)}
+  The leading NL by N part of this array must contain
+  $E^{(j)}(T),\ j=0,\dots,L-1$.
+\end{entry}
+
+\begin{entry}{LDWQ}{INTEGER}
+  The leading dimension of array WQ as declared in the calling
+  program.\\
+  LDWQ $\ge$ N.
+\end{entry}
+
+\begin{entry}{EQ}{DOUBLE PRECISION array of DIMENSION (LDEQ,*)}
+  The leading NL by NL part of this array must contain the
+  matrix $EQ$ of stage $L-1$.
+\end{entry}
+
+\begin{entry}{LDEQ}{INTEGER}
+  The leading dimension of array $EQ$ as declared in the calling
+  program.\\
+  LDEQ $\ge$ N(L+1).
+\end{entry}
+
+\begin{entry}{AQ}{DOUBLE PRECISION array of DIMENSION (LDAQ,*)}
+  The leading NL by NL part of this array must contain the
+  matrix $AQ$ of stage $L-1$.
+\end{entry}
+
+\begin{entry}{LDAQ}{INTEGER}
+  The leading dimension of array AQ as declared in the calling
+  program.
+  LDAQ $\ge$ N(L+1).
+\end{entry}
+
+\begin{entry}{FQ}{DOUBLE PRECISION array of DIMENSION (*)}
+  The first NL components of this array must contain the vector
+  $FQ$ of stage $L-1$.
+\end{entry}
+
+\subsection{Arguments Out}
+
+\begin{entry}{WQ}{DOUBLE PRECISION array of DIMENSION (LDWQ,*)}
+    The leading N(L+1) by N part of this array contains
+    $E^{(j)}(T),\ j=0,\dots,L$.
+\end{entry}
+
+\begin{entry}{EQ}{DOUBLE PRECISION array of DIMENSION (LDEQ,*)}
+  The leading N(L+1) by N(L+1) part of this array contains the
+  matrix $EQ$ of stage L.
+\end{entry}
+
+\begin{entry}{AQ}{DOUBLE PRECISION array of DIMENSION (LDAQ,*)}
+  The leading N(L+1) by N(L+1) part of this array contains the
+  matrix $AQ$ of stage L.
+\end{entry}
+
+\begin{entry}{FQ}{DOUBLE PRECISION array of DIMENSION (*)}
+  The first N(L+1) components of this array contain the vector
+  $FQ$ of stage L.
+\end{entry}
+
+\begin{entry}{IPAR}{INTEGER array of DIMENSION (*)}
+  This integer array can be used for communication between the calling
+  program and the EDIF, ADIF and FDIF subroutines.
+\end{entry}
+
+\begin{entry}{RPAR}{DOUBLE PRECISION array of DIMENSION (*)}
+  This real array can be used for communication between the calling
+  program and the EDIF, ADIF and FDIF subroutines.
+
+  IPAR and RPAR are not altered by DNFPEN. If these arrays are used,
+  they must be dimensioned in the calling program and in EDIF, ADIF
+  and FDIF as arrays of appropriate length. Otherwise, ignore these
+  arrays by treating them as dummy arrays of length one.
+\end{entry}
+
+\subsection{Workspace}
+None.
+
+\subsection{Tolerances}
+None.
+
+\subsection{Mode Parameters}
+None.
+
+\subsection{Warning Indicator}
+None.
+
+\subsection{Error Indicator}
+
+\begin{entry}{IERR}{INTEGER}
+  Unless the routine detects an error (see next section), IERR
+  contains $0$ on exit.
+\end{entry}
+
+\section{Warnings and Errors detected by the Routine}
+
+\ierr{-1}{An error occured in EDIF, ADIF or FDIF.}
+\ierr{-2}{The input parameter IDIF, i.e. L, of EDIF, ADIF or FDIF was
+  larger then the highest derivative the routine provides.}
+
+\section{Method}
+If we denote the
+$i$-th derivative by a $\mbox{superscript}^{(i)}$ then EQ, AQ and
+FQ are defined componentwise by
+
+\begin{eqnarray*}
+  (EQ)_{ij} &:=& {i \choose j} E^{(i-j)}(t) -
+  {i \choose j+1}A^{(i-j-1)}(t),\ i,j=0,\dots,L \\
+  (AQ)_{ij} &:=& \left\{
+    \begin{array}{cl}
+      A^{(i)}(t) & \mbox{for } i=0,\dots,L,\ j=0 \\
+      0          & \mbox{otherwise}
+    \end{array}
+  \right. \\
+  (FQ)_i &:=& f^{(i)}(t),\ i=0,\dots,L
+\end{eqnarray*}
+
+\section{References}
+
+\begin{thebibliography}{1}
+
+\bibitem{KunM92}
+P.~Kunkel and V.~Mehrmann.
+\newblock A new class of discretization methods for the solution of linear
+  differential-algebraic equations.
+\newblock Materialien LXII , FSP Mathematisierung, Universit{\"a}t Bielefeld,
+  1992.
+\newblock To appear in SIAM J. Numer. Anal.
+
+\bibitem{KunMRW95}
+P.~Kunkel, V.~Mehrmann, W.~Rath, and J.~Weickert.
+\newblock {GELDA}: A software package for the solution of general linear
+  differential algebraic equations.
+\newblock Preprint SPC 95_8, TU Chemnitz-Zwickau, February 1995.
+
+\end{thebibliography}
+
+%\section{Numerical Aspects}
+
+\section{Further Comments}
+The subroutines must be used iteratively to obtain $EQ, AQ$ and $FQ$
+for a specific stage $L$.
+
+\end{document}
+% Local Variables:
+% mode: latex
+% TeX-master: t
+% End:

@@ -1,0 +1,196 @@
+==================
+DGELDA README FILE
+==================
+
+Version 1.0   : July 10, 1995
+Version 1.1   : July 20, 1995
+Version 1.1.1 : October 12, 1995
+ 
+DGELDA [4] is a software package for the numerical solution of linear
+differential-algebraic equations with variable coefficients. The 
+implementation is based on the new discretization scheme introduced
+in [3]. It can deal with systems of arbitrary index and with systems
+that do not  have unique solutions or inconsistencies in the initial
+values or the inhomogeneity.  
+
+The package includes a computation of all the local invariants of the
+system, a regularization procedure and an index reduction scheme and
+it can be combined with every solution method for standard index 1
+systems. Nonuniqueness and inconsistencies are treated in a least
+square sense. In our package we have implemented backward
+differentiation formulas (BDF) methods [1] and Runge-Kutta (RK)
+schemes [2].  
+
+DGELDA is available via FTP or WWW. 
+
+The compressed tar file dgelda-1.1.tar.Z contains the Fortran source
+for DGELDA and a demo program. 
+
+It also contains Fortran code for a subset of LAPACK and the Basic
+Linear Algebra Subprograms (the Level 1, 2, and 3 BLAS) needed by
+the LAPACK routines. However these codes are intended for use only if
+there is no other implementation of LAPACK or the BLAS already
+available on your machine; the efficiency of DGELDA and LAPACK 
+depends very much on the efficiency of the BLAS.
+
+
+Installing DGELDA:
+==================
+
+0. Getting the DGELDA:
+
+Get the compressed tar file via 
+
+  FTP: ftp.tu-chemnitz.de/pub/Local/mathematik/Rath/dgelda-1.1.tar.Z
+or
+  WWW: http://www.tu-chemnitz.de/~rath/gelda.html
+
+Uncompress and untar the tar file with the command
+
+  uncompress -c dgelda-1.1.tar.Z | tar xf -
+
+
+1. Edit the file dgelda-1.1/make.inc:
+
+Before the libraries can be built you must define all machine
+dependent parameters in the file dgelda-1.1/make.inc. Their you must
+modify FORTRAN, FCOPTS, NOOPT, LOADER, LOADOPTS, ARCH, ARCHFLAGS,
+RANLIB and LATEX to specify the compiler, compiler options, loader, loader
+options, archiver, archiver options, ranlib and the LaTeX version for
+your machine. 
+Next, you must modify LAPACKLIB and BLASLIB. If LAPACK and/or the BLAS
+are installed on your system you can specify the search path for these
+libraries (e.g. BLASLIB = /usr/lib/blas.a) or you can use the -lx
+loader option (e.g. BLASLIB = -lblas if the library libblas.a is in
+the loader search path). If LAPACK or the BLAS are not installed 
+on your system you should use the default settings.
+Finally, you must change TIMESRC, TIMECOMP, TIMEOPTS and TIMELIB to
+specify the source file, compiler, compiler options and libraries you 
+need to compile and load a descnd.* routine. 
+
+See the make.inc.HPUX, make.inc.Linux and make.inc.SUN for examples.   
+
+
+2. Test and install the machine dependent routines:
+
+Postscript and LaTeX versions of the LAPACK Quick Installation Guide
+are in the dgelda-1.1/INSTALL directory, in the files lawn81.tex,
+psfig.tex, lawn81.ps, and org2.ps. Consult the Installation Guide
+(chapter 6.1) for further details on installing the machine dependent
+routines in each subdirectory.  
+
+You may need to supply a correct version of dsecnd.f or dsecnd.f for
+your machine. You can change TIMESRC, TIMECOMP, TIMEOPTS and TIMELIB
+in dgelda-1.1/make.inc to specify the source file, the compiler,
+special compiler or loader options to compile and load dsecnd.f or
+dsecnd.c.  
+(NOTE, a quick and dirty way is to use dsecnd.f.no_etime, i.e. no
+ timings are possible)
+
+If you changed one of the machine dependent routines copy it into the
+dgelda-1.1/LAPACK directory. 
+
+
+3. Creating the LAPACK and/or BLAS library:
+
+If LAPACK or the BLAS are not installed on your system use
+
+	make lib  
+	make blaslib
+or 
+	make lapacklib
+
+to create both libraries, only the BLAS or only the LAPACK library.
+
+
+4. Create the DGELDA Library and the demo program:
+
+Just use
+	
+	make
+
+to create the DGELDA library and the demo program. Start the program
+with
+
+	./demo
+
+and you can choose between the BDF or RK method to solve the test
+problem (See demo.out).
+
+
+5. Create the library routine documents:
+
+In dgelda-1.1/TeX directory you find the files 
+
+	dgelda.tex  dnfix1.tex  dnfpen.tex  dnfval.tex
+        dnfind.tex  dnfotr.tex  dnfred.tex
+
+which are the LaTeX source files for the library routine
+documents. You can use
+
+	make docu
+
+to create the documentation  (i.e. DVI files) in the dgelda-1.1/TeX
+directory.  
+
+The main library routine is the subroutine DGELDA which performs all
+task to solve a linear DAE with variable coefficients. Additionally,
+the documentation for the subroutines which perform the reduction of
+a high strangeness index DAE to a strangeness free DAE is included.
+
+Furthermore, the dgelda-1.1/TeX directory contains the file gelda1.ps
+which gives on overview about the connections between the different
+subroutines. 
+
+
+History:
+========
+
+Version 1.1.1: October 12, 1995
+	Some minor bugfixes. 
+	A Linux version of the make.inc file.
+
+Version 1.1  : July 19, 1995
+	Changed order of the parameter in the DGELDA subroutine to meet
+        the SLICOT [5] interface standard.
+        Added equilibration of linear systems for the BDF solver,
+        therefore we need additional space in RWORK (2*NEQ).
+
+Version 1.0  : July 10, 1995
+	Final release. This version of DGELDA is described in [4].
+
+
+
+References
+==========
+[1] K. E. Brenan, S. L. Campbell and L. R. Petzold.
+    Numerical Solution of Initial-Value Problems in Differential
+    Algebraic Equations.
+    Elsevier, North Holland, New York, N. Y., 1989.
+
+[2] E. Hairer and G. Wanner.
+    Solving Ordinary Differential Equations II.
+    Springer-Verlag, Berlin, 1991.
+
+[3] P. Kunkel and V. Mehrmann.
+    A new class of discretization methods for the solution of
+    linear differential-algebraic equations.
+    Materialien LXII , FSP Mathematisierung, Universitaet
+    Bielefeld,  1992.
+    To appear in SIAM J. Numer. Anal.
+
+[4] P. Kunkel, V. Mehrmann, W. Rath and J. Weickert.
+    GELDA: A software package for the solution of general linear
+    differential algebraic equations.
+    Preprint SPC 95_8, TU Chemnitz-Zwickau, February 1995.
+
+[5] Working Group on Software (WGS).
+    SLICOT: Implementation and documentation standards.
+    WGS-report 90-1, Eindhoven, University of Technology. 
+
+W. Rath 
+Fakultaet fuer Mathematik  
+TU Chemnitz-Zwickau        
+D-09107 Chemnitz, FRG
+Email: w.rath@mathematik.tu-chemnitz.de
+WWW:   http://www.tu-chemnitz.de/~rath

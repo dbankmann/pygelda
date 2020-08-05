@@ -1,0 +1,87 @@
+!    -*- f90 
+! Note: the context of this file is case sensitive.
+
+!!
+!! Copyright (c) 2020
+!!
+!! @author: Daniel Bankmann
+!! @company: Technische Universität Berlin
+!!
+!!
+!!
+!!    This program is free software: you can redistribute it and/or modify
+!!    it under the terms of the GNU General Public License as published by
+!!    the Free Software Foundation, either version 3 of the License, or
+!!    (at your option) any later version.
+!!
+!!    This program is distributed in the hope that it will be useful,
+!!    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!!    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!!    GNU General Public License for more details.
+!!
+!!    You should have received a copy of the GNU General Public License
+!!    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+
+
+python module __user__routines 
+    interface
+        subroutine edif(n,t,idif,e,lde,ipar,rpar,ierr)
+            integer,intent(in) :: n
+            double precision,intent(in) :: t
+            integer,intent(in) :: idif
+            double precision dimension(lde,n),intent(inout) :: e
+            integer, optional,check(shape(e,0)==lde),depend(e) :: lde=shape(e,0)
+            integer dimension(1),intent(inout) :: ipar
+            double precision dimension(1),intent(inout) :: rpar
+            integer,intent(out) :: ierr
+        end subroutine edif
+        subroutine adif(n,t,idif,a,lda,ipar,rpar,ierr) 
+            integer,intent(in) :: n
+            double precision,intent(in) :: t
+            integer,intent(in) :: idif
+            double precision dimension(lda,n),intent(inout) :: a
+            integer, optional,check(shape(a,0)==lda),depend(a) :: lda=shape(a,0)
+            integer dimension(1) :: ipar
+            double precision dimension(1) :: rpar
+            integer,intent(out) :: ierr
+        end subroutine adif
+        subroutine fdif(n,t,idif,f,ipar,rpar,ierr) 
+            integer,intent(in) :: n
+            double precision,intent(in) :: t
+            integer,intent(in) :: idif
+            double precision dimension(n),intent(inout) :: f
+            integer dimension(1) :: ipar
+            double precision dimension(1) :: rpar
+            integer,intent(out) :: ierr
+        end subroutine fdif
+    end interface 
+end python module __user__routines
+python module _gelda 
+    interface 
+        subroutine dgelda(edif,adif,fdif,neq,t,tout,x,xprime,cval,ipar,rpar,iwork,liw,rwork,lrw,rtol,atol,method,info,iwarn,ierr) ! in :test:SRC/dgelda.f
+	    use __user__routines, edif=>edif, adif=>adif, fdif=>fdif
+            external edif
+            external adif
+            external fdif
+            integer,intent(in) :: neq
+            double precision,intent(inout) :: t
+            double precision,intent(in) :: tout
+            double precision dimension(neq),intent(inout) :: x
+            double precision dimension(neq),intent(out) :: xprime
+            integer dimension(4),intent(out) :: cval
+            integer dimension(1) :: ipar
+            double precision dimension(1) :: rpar
+            integer dimension(liw),depend(liw),intent(cache,hide) :: iwork
+            integer,intent(hide) :: liw=20+6*neq
+            double precision dimension(lrw),depend(lrw),intent(cache,hide) :: rwork
+            integer,intent(hide) :: lrw = 1000*neq*neq
+            double precision dimension(neq),intent(in) :: rtol
+            double precision dimension(neq),intent(in) :: atol
+            integer,intent(in),optional :: method=1
+            integer dimension(20),intent(in),optional :: info
+            integer,intent(out) :: iwarn
+            integer,intent(out) :: ierr
+        end subroutine dgelda
+    end interface 
+end python module gelda

@@ -1,0 +1,7 @@
+tags
+build
+.ropeproject
+*.so
+.pytest_cache
+*.egg*
+*.pyc

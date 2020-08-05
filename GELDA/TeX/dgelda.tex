@@ -1,0 +1,1105 @@
+\documentstyle[dgelda,a4wide]{article}
+
+\begin{document}
+
+\begin{center}
+  {\bf DGELDA --- Library Routine Document (Version 1.1)}
+\end{center} 
+ 
+\section{Purpose}
+
+DGELDA \cite{KunMRW95} solves linear differentiell algebraic equations
+(DAEs) with variable coefficients of the form 
+$$
+  \begin{array}{rcl}
+    E(t)\dot{x}(t) &=& A(t)x(t) + f(t)\\
+    x(t_0) &=& x_0
+  \end{array}
+$$
+for $x$ in a specified range of the independent variable $t$.
+
+\section{Specification}
+
+\begin{verbatim}
+      SUBROUTINE DGELDA (EDIF, ADIF, FDIF, N, T, TOUT, X, XPRIME,
+     $                   CVAL, IPAR, RPAR, IWORK, LIW, RWORK, LRW,
+     $                   RTOL, ATOL, METHOD, INFO, IWARN, IERR)
+      INTEGER          CVAL(4), IERR, INFO(15), IPAR(*), IWARN,
+     $                 IWORK(*), LIW, LRW, N
+      DOUBLE PRECISION ATOL(*), RPAR(*), RTOL(*), RWORK(*), T, TOUT,
+     $                 X(*), XPRIME(*)
+      EXTERNAL         EDIF, ADIF, FDIF
+\end{verbatim}
+
+\section{Argument List}
+
+\subsection{User--supplied Subroutines}
+
+\begin{entry}{EDIF}{User--supplied function}
+  This is a subroutine which the user provides to define the matrix $E(t)$
+  and its derivatives. It has the form
+  \begin{center}
+    SUBROUTINE EDIF(N,T,IDIF,E,LDE,IPAR,RPAR,IERR).
+  \end{center}
+  The subroutine takes as input the number of equations N, the time T
+  and the integer parameter IDIF. EDIF must not alter these input
+  parameters or the leading dimension LDE of the array E. As output,
+  the subroutine produces the IDIF-th derivative of $E(t)$ at time T
+  in the leading N by N part of the array E. The integer flag IERR is
+  always zero on input and EDIF should alter IERR only if IDIF is
+  larger than the highest derivative of $E(t)$ the subroutine provides
+  (set $\mbox{IERR}=-2$) or if another problem occurs (set
+  $\mbox{IERR}=-1$). IPAR and RPAR are integer and real arrays which
+  can be used for the communication between the user's calling program
+  and the subroutines EDIF, ADIF and FDIF.  
+
+  In the calling program, EDIF must be declared as external.
+\end{entry}
+\begin{entry}{ADIF}{User--supplied function}
+  This is a subroutine which the user provides to define the matrix $A(t)$
+  and its derivatives. It is of the form
+  \begin{center}
+    SUBROUTINE ADIF(N,T,IDIF,A,LDA,IPAR,RPAR,IERR)
+  \end{center}
+  and the input and output parameters are similar to these of EDIF.
+\end{entry}
+\begin{entry}{FDIF}{User--supplied function}
+  This is a subroutine which the user provides to define the vector $f(t)$
+  and its derivatives. It is of the form
+  \begin{center}
+    SUBROUTINE FDIF(N,T,IDIF,F,IPAR,RPAR,IERR)
+  \end{center}
+  and the input and output parameters are similar to these of
+  EDIF. Except that the first N elements of the 1-dimensional array F
+  contain the IDIF-th derivative of $f(t)$ at time T. Note further,
+  since F is a 1-dimensional array no leading dimension is needed.
+\end{entry}
+
+\subsection{Arguments In}
+
+\begin{entry}{N}{INTEGER}
+  The number of equations.\\
+  N $\ge$ 1.
+\end{entry}
+\begin{entry}{T}{DOUBLE PRECISION}
+  The initial point of the integration.\\
+  {\bf Note:} This scalar is overwritten.
+\end{entry}
+\begin{entry}{TOUT}{DOUBLE PRECISION}
+  The point at which a solution is desired. Integration either forward
+  in T (TOUT $>$ T) or backward in T (TOUT $<$ T) is allowed. 
+
+  At the beginning of the integration ($\mbox{INFO(1)}=0$, see below)
+  the user can set T = TOUT. The code will then compute the
+  strangeness index and the number of differential, algebraic and
+  undetermined equations and return this values in CVAL. Furthermore,
+  if INFO(11) = 0 consistent initial values will be computed and
+  stored in X. 
+\end{entry}
+\begin{entry}{X}{DOUBLE PRECISION array of DIMENSION (N)}
+  If INFO(11) = 0, this array can contain a guess for the initial
+  value. A consistent initial value close (in the least square sense)
+  to this guess is then computed. If no guess is available, set all
+  elements of X to zero.
+
+  If INFO(11) = 1, this array must contain consistent initial values
+  of the N solution components at the initial point T. \\
+    {\bf Note:} This array is overwritten.
+\end{entry}
+
+\subsection{Arguments Out}
+
+\begin{entry}{T}{DOUBLE PRECISION}
+  The solution was successfully advanced to the output value of T.
+\end{entry}
+\begin{entry}{X}{DOUBLE PRECISION array of DIMENSION (N)}
+  Contains the computed solution approximation at T.
+\end{entry}
+\begin{entry}{XPRIME}{DOUBLE PRECISION array of DIMENSION (N)}
+  Contains the computed first derivative of the solution approximation at T.
+\end{entry}
+\begin{entry}{CVAL}{INTEGER array of DIMENSION (4)}
+  Contains the characteristic values of the DAE:
+  \begin{description}
+  \item[CVAL(1)] contains the strangeness index $\mu$.
+  \item[CVAL(2)] contains the number $d_{\mu}$ of differential
+    components.
+  \item[CVAL(3)] contains the number $a_{\mu}$ of algebraic
+    components.
+  \item[CVAL(4)] contains the number $u_{\mu}$ of undetermined components.
+  \end{description}
+\end{entry}
+
+\begin{entry}{IPAR}{INTEGER array of DIMENSION (*)}
+  This integer array can be used for communication between the calling
+  program and the EDIF, ADIF and FDIF subroutines.
+\end{entry}
+\begin{entry}{RPAR}{DOUBLE PRECISION array of DIMENSION (*)}
+  This real array can be used for communication between the calling
+  program and the EDIF, ADIF and FDIF subroutines. 
+
+  IPAR and RPAR are not altered by DGELDA or its subprograms. If these
+  arrays are used, they must be dimensioned in the calling program and
+  in EDIF, ADIF and FDIF as arrays of appropriate length. Otherwise,
+  ignore these arrays by treating them as dummy arrays of length one.
+\end{entry}
+
+\begin{entry}{RWORK, IWORK}{See \ref{workspace}}
+  These real and integer arrays provide the workspace (see below).
+  Usually the information they contain are of no interest, but
+  sometimes the following may be useful:
+  \begin{description}
+  \item[IWORK(7)] contains the order of the method to be
+    attempted on the next step.
+  \item[IWORK(8)] contains the order of the method used on the
+    last step.
+  \item[IWORK(11)] contains the number of steps taken so far.
+  \item[IWORK(12)] contains the number of calls to EDIF, ADIF
+    and FDIF so far.
+  \item[IWORK(13)] contains the number of factorizations of the
+    system matrix so far.
+  \item[IWORK(14)] contains the total number of error test
+    failures so far.
+  \item[RWORK(3)]  contains the stepsize H to be attempted on
+    the next step.
+  \item[RWORK(4)] contains the current value of the independent
+    variable, i.e., the farthest point integration has reached. This
+    will be different from T only when interpolation has been
+    performed ($\mbox{IERR}=3$).
+  \item[RWORK(7)] contains the stepsize used on the last
+    successful step.
+  \end{description}
+\end{entry}
+
+\subsubsection{Workspace}\label{workspace}\quad\\
+\noindent
+{\bf{IWORK} -- {INTEGER array of DIMENSION at least (LIW)}.}\quad\\
+\begin{entry}{LIW}{INTEGER}
+  The length of IWORK. \\
+  If $\mbox{METHOD}=1$ then $\mbox{LIW} \ge 20+2\mbox{N}$.\\
+  If $\mbox{METHOD}=2$ then $\mbox{LIW} \ge 20+6\mbox{N}$.
+\end{entry}
+\noindent
+{\bf{RWORK} -- {DOUBLE PRECISION array of DIMENSION at least (LRW)}.}
+\quad\\
+\begin{entry}{LRW}{INTEGER}
+  The length of RWORK.\\
+  If $\mbox{METHOD}=1$ then
+  \begin{eqnarray*}
+    \mbox{LRW} &\ge& 50 + (21 + \mbox{MAXORD}+
+    14\mbox{MXINDX})\mbox{N}\\
+    &&+ (6 + \mbox{MXINDX} + 6(\mbox{MXINDX}+1)^2) \mbox{N}^2.
+  \end{eqnarray*}
+  If $\mbox{METHOD}=2$ then
+  \begin{eqnarray*}
+    \mbox{LRW} &\ge& 20 + (29 + 14\mbox{MXINDX})\mbox{N} \\
+    && + (15 + \mbox{MXINDX} + 6(\mbox{MXINDX}+1)^2) \mbox{N}^2.
+  \end{eqnarray*}
+  For good performance, LRW should generally be larger.
+\end{entry}
+
+\subsection{Tolerances}
+
+\begin{entry}{RTOL}{DOUBLE PRECISION array of DIMENSION (*)}
+  The relative error tolerances which the user provides to indicate how
+  accurately he wishs the solution to be computed. The user may choose RTOL
+  and ATOL to be both scalars or else both vectors.\\
+  If RTOL and ATOL are scalars (INFO(2) = 0) the user has to declare this
+  array to be RTOL(1).
+\end{entry}
+\begin{entry}{ATOL}{DOUBLE PRECISION array of DIMENSION (*)}
+  The absolute error tolerances which the user provides.\\
+  If ATOL and RTOL are scalars (INFO(2) = 0) the user has to declare
+  this array to be ATOL(1).
+
+  The tolerances are used by the code in a local error test at each
+  step which requires roughly that
+  $$ | \mbox{LOCAL ERROR} | \le \mbox{RTOL}* |\mbox{X}|+\mbox{ATOL}$$
+  for each vector component.
+
+  The true (global) error is the difference between the true solution
+  of the initial value problem and the computed approximation.
+  Practically all present day codes, including this one, control the
+  local error at each step and do not even attempt to control the
+  global error directly.
+
+  Usually, but not always, the true accuracy of the computed X is
+  comparable to the error tolerances. This code will usually, but not
+  always, deliver a more accurate solution if the user reduces the
+  tolerances and  integrate again.  By comparing two such solutions
+  the user can get a fairly reliable idea of the true error in the solution
+  at the bigger tolerances.
+
+  Setting ATOL=0 results in a pure relative error test on that
+  component. Setting RTOL=0 results in a pure absolute error test on
+  that component. A mixed test with non-zero RTOL and ATOL corresponds
+  roughly to a relative error test when the solution component is much
+  bigger than ATOL and to an absolute error test when the solution
+  component is smaller than the threshold ATOL.
+
+  The code will not attempt to compute a solution at an accuracy
+  unreasonable for the machine being used. It will advise the user if he
+  asks for too much accuracy and inform the user as to the maximum accuracy
+  it believes possible.
+\end{entry}
+
+\subsection{Mode Parameters}
+
+\begin{entry}{METHOD}{INTEGER}
+  Indicates which integration method should be used as follows:
+  \begin{description}
+  \item[METHOD=1] the code uses the BDF solver,
+  \item[METHOD=2] the code uses the Runge-Kutta solver.
+  \end{description}
+\end{entry}
+\begin{entry}{INFO}{INTEGER array of DIMENSION (20)}
+  The basic task of the code is to solve the system from T to TOUT and
+  return an answer at TOUT. INFO is an integer array which is used to
+  communicate exactly how the user wants this task to be carried
+  out. The simplest use of the code corresponds to setting all entries
+  of INFO to 0 (See \ref{sec:info} for details).
+\end{entry}
+
+\subsection{Warning Indicator}
+
+\begin{entry}{IWARN}{INTEGER}
+  Is always zero in this version of DGELDA.   
+\end{entry}
+
+\subsection{Error Indicator}
+
+\begin{entry}{IERR}{INTEGER}
+  Unless the code detects an error (see next section), IERR contains a
+  positive value on exit.\\
+  \ierr{1}{In the BDF--solver (METHOD = 1) a step was successfully taken
+    in the intermediate-output mode. The code has not yet reached TOUT.}
+  \ierr{2}{The integration to TOUT was successfully completed
+    (T=TOUT) by stepping exactly to TOUT.}
+  \ierr{3}{In the BDF--solver the integration to TOUT was successfully
+    completed (T=TOUT) by stepping past TOUT. X is obtained by
+    interpolation.}
+  \ierr{4}{At the first step the user set T=TOUT and the code computed
+    successfully the strangeness index and the other characteristic
+    quantaties. Furthermore, if INFO(11)=0 consistent initial values
+    are stored in X.}
+\end{entry}
+
+\section{Warnings and Errors detected by the Routine}
+
+\begin{center}
+  *** Task interrupted ***
+\end{center}
+\ierr{-1}{A large amount of work has been expended (More then NMAX
+  steps).}
+\ierr{-2}{The error tolerances are too stringent.}
+\ierr{-3}{The local error test cannot be satisfied because the user
+  specified a zero component in ATOL and the corresponding computed
+  solution component is zero. Thus, a pure relative error test is
+  impossible for this component.}
+\ierr{-6}{DGELDA had repeated error test failures on the last
+  attempted step.}
+\ierr{-8}{The linear system solver failed several times.}
+\ierr{-10}{The integration could not continue because IERR in
+  EDIF, ADIF or FDIF was repeatedly equal to minus 1.}
+\ierr{-21}{The input parameter IDIF of EDIF, ADIF or FDIF was larger then
+  the highest derivative the routine provides.}
+\ierr{-22}{Failed to determine strangeness index.}
+\ierr{-23}{Failed to compute an equivalent strangeness index 0 system.}
+\ierr{-24}{Failed to compute an initial X.}
+\ierr{-25}{Failed to compute an initial derivative.}
+\ierr{-26}{Unable to continue due to change in characteristic values.}
+
+\begin{center}
+  *** Task terminated ***
+\end{center}
+\ierr{-101}{Some element of INFO vector is not zero or one.}
+\ierr{-102}{$\mbox{N} \le 0$.}
+\ierr{-103}{MAXORD not in range.}
+\ierr{-104}{MXINDX $<$ 0.}
+\ierr{-105}{LRW is less than the required length for RWORK.}
+\ierr{-106}{LIW is less than the required length for IWORK.}
+\ierr{-107}{Some element of RTOL is $< 0$.}
+\ierr{-108}{Some element of ATOL is $< 0$.}
+\ierr{-109}{All elements of RTOL and ATOL are zero.}
+\ierr{-110}{INFO(4)=1 and TOUT is behind TSTOP.}
+\ierr{-111}{$\mbox{HMAX} \le 0.0$}
+\ierr{-112}{TOUT is behind T.}
+\ierr{-113}{INFO(8)=1 and H0=0.0.}
+\ierr{-114}{Some element of $\mbox{RTOL}* |\mbox{X}|+\mbox{ATOL}$
+  is $\le 0.0$.}
+\ierr{-115}{TOUT is too close to T to start integration.}
+\ierr{-116}{INFO(4)=1 and T is behind TSTOP.}
+\ierr{-119}{INFO(1) = 1 and TOUT = T.}
+\ierr{-120}{$\mbox{NMAX} \le 0$. }
+\ierr{-121}{$\mbox{SAFE} \le 0.001 \mbox{ or SAFE} \ge 1.0$. }
+\ierr{-122}{$\mbox{FACL} < 1.0 \mbox{ or FACR} > 1.0$. }
+\ierr{-123}{$\mbox{QUOT1} > 1.0 \mbox{ or QUOT2} < 1.0$. }
+\ierr{-130}{An exit in the LAPACK solution routine occured.}
+\ierr{-131}{An exit in the LAPACK solution routine for error estimation
+occured.}
+\ierr{-998}{The last step was terminated with a negative value of IERR
+  larger than $-100$, and no appropriate action was taken.}
+\ierr{-999}{The previous call was terminated because of illegal input
+  ($\mbox{IERR}<-100$) and there is illegal input in the present call,
+  as well.  (Suspect infinite loop.)}
+
+\section{Method}
+
+The most important invariant in the analysis of linear DAE's is the so
+called {\it strangeness index} \cite{KunM92}, which generalizes the
+differential index \cite{BreCP89} for systems with undetermined
+components. 
+
+The implementation of DGELDA \cite{KunMRW95} is based on the
+construction of the discretization scheme introduced in
+\cite{KunM94a}, which first determines all the local invariants and
+then transforms the system into a strangeness-free DAE with the same
+solution set.  
+
+The strangeness-free DAE is solved by either BDF methods, which were
+adapted from DASSL of Petzold \cite{Pet83}, or a Runge--Kutta method,
+which was adapted from RADAU5 of Hairer/Wanner \cite{HaiW91}. 
+
+\section{References}
+
+%\bibliographystyle{plain}
+%\bibliography{../BibTeX/dae_project}
+\begin{thebibliography}{1}
+
+\bibitem{BreCP89}
+K.~E. Brenan, S.~L. Campbell, and L.~R. Petzold.
+\newblock {\em Numerical Solution of Initial-Value Problems in Differential
+  Algebraic Equations}.
+\newblock Elsevier, North Holland, New York, N. Y., 1989.
+
+\bibitem{HaiW91}
+E.~Hairer and G.~Wanner.
+\newblock {\em Solving Ordinary Differential Equations {II}}.
+\newblock Springer-Verlag, Berlin, 1991.
+
+\bibitem{KunM94a}
+P.~Kunkel and V.~Mehrmann.
+\newblock Canonical forms for linear differential-algebraic equations with
+  variable coefficients.
+\newblock {\em J. Comput. Appl. Math.}, 56:225--259, 1994.
+
+\bibitem{KunM92}
+P.~Kunkel and V.~Mehrmann.
+\newblock A new class of discretization methods for the solution of linear
+  differential-algebraic equations.
+\newblock Materialien LXII , FSP Mathematisierung, Universit{\"a}t Bielefeld,
+  1992.
+\newblock To appear in SIAM J. Numer. Anal.
+
+\bibitem{KunMRW95}
+P.~Kunkel, V.~Mehrmann, W.~Rath, and J.~Weickert.
+\newblock {GELDA}: A software package for the solution of general linear
+  differential algebraic equations.
+\newblock Preprint SPC 95\_8, TU Chemnitz-Zwickau, February 1995.
+
+\bibitem{Pet83}
+L.~R. Petzold.
+\newblock A description of {DASSL}: A differential/algebraic system solver.
+\newblock In R.~S. Stepleman et~al., editors, {\em IMACS Trans. Scientific
+  Computing Vol. 1}, pages 65--68. North-Holland, Amsterdam, 1983.
+
+\end{thebibliography}
+
+
+\section{Numerical Aspects}
+
+None.
+
+\section{Further Comments}
+
+\subsection{Setting up the INFO array before the first call}
+\label{sec:info}
+This array is used to give the code more details about
+how the user wants his problem to be solved. The user must respond to
+all of the following items, which are arranged as questions. The simplest use
+of the code corresponds to answering all questions as yes,
+i.e. setting all entries of INFO to 0.
+\begin{description}
+\item[INFO(1)] This parameter enables the code to initialize
+  itself. The user must set it to indicate the start of every new
+  problem.
+  \yesno{Is this the first call for this problem}
+  {Set INFO(1) = 0}
+  {Not applicable here. \\ See below for continuation calls.}
+\item[INFO(2)] The error tolerances RTOL and ATOL are used to
+  specify how much  accuracy the user wants. The simplest use is to take
+  them both to be scalars. To obtain more flexibility, they can both
+  be vectors.
+  \yesno{Are both error tolerances RTOL, ATOL scalars}
+  {Set INFO(2) = 0\\and input scalars for both RTOL and ATOL}
+  {Set INFO(2) = 1\\and input arrays for both RTOL and ATOL}
+\item[INFO(3)] The code integrates from T in the direction of TOUT
+  by steps. If the user wishs, it will return the computed solution at
+  the next intermediate step (the intermediate-output mode) or
+  TOUT, whichever comes first. If the user must have solutions at
+  many specific TOUT points, this code will compute them
+  efficiently.
+  \yesno{Do you want the solution only at TOUT (and not at the
+    next intermediate step)}
+  {Set INFO(3) = 0}
+  {Set INFO(3) = 1}
+\item[INFO(4)] If the user uses the BDF--solver (METHOD = 1), the code may
+  integrate past TOUT and interpolate to obtain the result at TOUT, to
+  handle solutions at many specific values TOUT efficiently. Sometimes
+  it is not possible to integrate beyond some  point TSTOP because the
+  equation changes there or it is not defined past TSTOP. Then the user must
+  tell the code not to go past.
+  \yesno{Can the integration be carried out without any
+    restrictions on the independent variable T}
+  {Set INFO(4)=0}
+  {Set INFO(4)=1\\
+    and define the stopping point TSTOP by setting RWORK(1)=TSTOP}
+\item[INFO(5)] The code assumes that the user wants to solve a time
+  dependent problem. If $E(t)$ and $A(t)$ are both constant the user
+  can help the code.
+  \yesno{Are $E(t)$ or $A(t)$ time dependent}
+  {Set INFO(5)=0}
+  {Set INFO(5)=1}
+\item[INFO(7)] The user can specify a maximum (absolute value of)
+  stepsize, so that the code will avoid passing over very large
+  regions.
+  \yesno{Do you want the code to decide on its own maximum stepsize}
+  {Set INFO(7)=0}
+  {Set INFO(7)=1 \\
+    and define HMAX by setting RWORK(2)=HMAX}
+\item[INFO(8)] Differential/algebraic problems may occasionally
+  suffer from severe scaling difficulties on the first step. If
+  the user knows a great deal about the scaling of his problem, he can
+  help to alleviate this problem by specifying an initial stepsize
+  H0.
+  \yesno{Do you want the code to define its own initial stepsize}
+  {Set INFO(8)=0}
+  {Set INFO(8)=1\\
+    and define H0 by setting RWORK(3)=H0}
+\item[INFO(9)] If storage is a severe problem and the user use the
+  BDF--solver (METHOD = 1), he can save some memory by restricting
+  the maximum order MAXORD. The default value is 5. For each order
+  decrease below 5, the code requires fewer locations, however it is
+  likely to be slower. In any case, the user must have
+  $1 \le \mbox{MAXORD} \le 5$.
+  \yesno{Do you want the maximum order to default to 5}
+  {Set INFO(9)=0}
+  {Set INFO(9)=1\\
+    and define MAXORD by setting IWORK(3)=MAXORD}
+\item[INFO(10)] The code tries to calculate the strangeness index of
+  the problem, however it needs more memory for high index
+  problems. The default value for the maximum index MXINDX is
+  3. The user can decrease it below 3 to save memory (if the index of
+  his problem is smaller than 3) or increase it to
+  solve a higher index problem. Note, that EDIF, ADIF and FDIF
+  must provide $E(t)$, $A(t)$, $F(t)$ and (maybe) their first
+  MXINDX derivatives. In any case, the user must have $\mbox{MXINDX}
+  \ge 0$.
+  \yesno{Do you want the maximum index to default to 3}
+  {Set INFO(10)=0}
+  {Set INFO(10)=1\\
+    and define MAXINDX by setting IWORK(4)=MAXINDX}
+\item[INFO(11)] In this code it is not neccesary to provide consistent
+  initial conditions. Using the special structure of the strangeness free
+  DAE, the code can compute consistent initial values to start the
+  integration (see also INFO(12)). However, often consistent initial
+  values are known and the code should use these values.
+  \yesno{Do you want the code to compute consistent initial values}
+  {Set INFO(11)=0}
+  {Set INFO(11)=1\\
+    and input consistent initial values in X}
+\item[INFO(12)] If $\mbox{INFO(11)}=0$, the code computes consistent
+  initial values in the least squares sense. The default method is to
+  compute consistent initial values which are close (in the least
+  squares sense) to the given X. Sometimes the user knows which are the
+  differential variables and he wants to prescribe these variables.
+  In this case, the user can use a different method, which keeps the
+  differential variables fixed.
+  \yesno{Do you want the code to use the default method for computing
+    consistent initial values}
+   {Set INFO(12)=0}
+   {Set INFO(12)=1}
+\item[INFO(14)] A maximum number of steps NMAX must be specified in order to
+  prevent the code from computing infinitely further in the case of repeated
+  step rejection. The default value for NMAX is 10 000.
+  \yesno{Do you want the maximum number of steps to default to 10 000}
+  {Set INFO(11)=0}
+  {Set INFO(11)=1\\
+    and define NMAX by setting IWORK(20)=NMAX}
+\item[INFO(15)] For the Runge--Kutta branch, the user can choose between two
+  step size strategies. If not specified otherwise, the code will use
+  the modified predictive controller of Gustafsson, which seems to produce
+  safer results. As alternative for simple problems, the user can apply the
+  classical step size control which produces often slightly faster runs.
+  \yesno{Do you want to use the predictive controller of Gustafsson}
+  {Set INFO(12)=0}
+  {Set INFO(12)=1}
+\item[INFO(16)] For the Runge--Kutta branch, a safety factor SAFE in
+  step size prediction is used in the formula for calculating the new
+  step size in dependency of the old one and the error norm. The
+  smaller SAFE is chosen, the more the new step size is
+  restricted. SAFE must lie in the interval $(0.001,1)$. The default 
+  value is $\mbox{SAFE}=0.9$. Furthermore, parameters FACL, FACR for
+  step size selection restrict the relation between the old and the
+  new stepsize. The new step size is chosen subject to $\mbox{1/FACL}
+  \le \mbox{HNEW/HOLD} \le \mbox{1/FACR}.$ The default values are
+  $\mbox{FACL}=5.0$ and $\mbox{FACR}=0.125$.
+  \yesno{Do you want SAFE, FACL, FACR to default to $0.9, 5.0$ and
+    $0.125$, respectively}
+  {Set INFO(13)=0}
+  {Set INFO(13)=1\\
+    and define SAFE, FACL, FACR by setting RWORK(11) = SAFE,
+    RWORK(12) = FACL, RWORK(13) = FACR}
+\item[INFO(17)] For the Runge--Kutta branch, if HNEW is not far from HOLD
+  $(\mbox{QUOT1} < \mbox{HNEW/HOLD} < \mbox{QUOT2})$
+  and the matrices $E$ and $A$ are constant, work can be saved by setting
+  HNEW = HOLD and using the system matrix of the previous step, so that a
+  new LU--decomposition is not necessary. For small systems one may have
+  QUOT1 = 1.0, QUOT2 = 1.2, for large full systems QUOT1 = 0.99, QUOT2 = 2.0
+  might be good. Default values are QUOT1 = 1.0, QUOT2 = 1.2.
+  \yesno{Do you want QUOT1, QUOT2 to default to 1.0 and 1.2, respectively}
+  {Set INFO(14)=0}
+  {Set INFO(14)=1\\
+    and define QUOT1, QUOT2 by setting RWORK(14) = QUOT1, RWORK(15) = QUOT2}
+\end{description}
+
+\subsection{Continuing the integration}
+The user must monitor the IERR parameter in order to determine what
+to do next.
+
+Do not alter any quantity not specifically permitted below, in
+particular do not alter N, T, X(*), RWORK(*), IWORK(*) or the
+differential equation in subroutines EDIF, ADIF and FDIF. Any such
+alteration constitutes a new problem and must be treated as such,
+i.e., the user must start afresh.
+The user cannot change from vector to scalar error control or vice versa
+(INFO(2)), but he can change the size of the entries of RTOL and
+ATOL. Increasing a tolerance makes the equation easier to
+integrate. Decreasing a tolerance will make the equation harder to
+integrate and should generally be avoided.
+
+The user can switch from the
+intermediate-output mode to the interval mode (INFO(3)) or vice versa
+at any time.
+
+If it has been necessary to prevent the integration from going past a
+point TSTOP (INFO(4), RWORK(1)), keep in mind that the code will not
+integrate to any TOUT beyond the currently specified TSTOP. Once TSTOP
+has been reached the user must change the value of TSTOP or set
+INFO(4)=0. The user may change INFO(4) or TSTOP at any time but he must
+supply the value of TSTOP in RWORK(1) whenever he set INFO(4)=1.
+
+The user should not change INFO(5), IWORK(1), or IWORK(2) unless he is
+going to restart the code.
+
+\begin{center}
+  *** Following a completed task ***
+\end{center}
+\noindent
+If
+\ierr{1}{call the code again to continue the integration another step
+  in the direction of TOUT.}
+\ierr{2 \mbox{ or } 3}{define a new TOUT and call the code again. TOUT
+  must be different from T. The user cannot change the direction of
+  integration without restarting.}
+\ierr{4}{define a new TOUT and call the code again. TOUT must be
+  different from T.} 
+
+\begin{center}
+  *** Following an interrupted task ***
+\end{center}
+\noindent
+To show the code that the user realizes the task was interrupted and that
+he wants to continue, he must take appropriate action and set INFO(1)
+= 1.
+ \noindent
+If
+\ierr{-1}{The code has taken  10000 steps. If the user wants to continue,
+  set INFO(1) = 1 and call the code again. An additional 10000 steps
+  will be allowed.}
+\ierr{-2}{The error tolerances RTOL and ATOL have been increased to
+  values the code estimates appropriate for continuing. The user may want
+  to change them himself. If the user is sure he wants to continue with
+  relaxed error tolerances, set INFO(1)=1 and call the code again.}
+\ierr{-3}{A solution component is zero and the user sets the corresponding
+  component of ATOL to zero. If the user is sure he want to continue, he
+  must first alter the error criterion to use positive values for
+  those components of ATOL corresponding to zero solution components,
+  then set INFO(1)=1 and call the code again.}
+\ierr{-6}{Repeated error test failures occurred on the last attempted
+  step in DGELDA. A singularity in the solution may be present. If the user
+  is absolutely certain he wants to continue, he should restart the
+  integration.}
+\ierr{-8}{The linear system solver routines failed several times. It
+  is possible that your problem is ill-posed, and cannot be solved
+  using this code.} 
+\ierr{-10}{IERR was repeatedly equal to minus one in EDIF, ADF or
+  FDIF. If you are absolutely certain you want to continue, you should
+  restart the integration.} 
+\ierr{-21}{IERR=-2 was encountered, and control is being returned to
+  the calling program.} 
+\ierr{-22}{DGELDA could not  determine the strangeness index. It is
+  possible that your problem is ill-posed, and cannot be solved using
+  this code.}
+\ierr{-23}{DGELDA could not compute an equivalent strangeness index
+  zero system. It is possible that your problem is ill-posed, and
+  cannot be solved using this code.} 
+\ierr{-24}{DGELDA could not compute an initial X. It is possible that
+  your problem is ill-posed, and cannot be solved using this code.}
+\ierr{-25}{DGELDA could not compute an initial derivative. It is
+  possible that your problem is ill-posed, and cannot be solved using
+  this code.} 
+\ierr{-26}{The strangeness index or the characteristic values changed
+  on the last step. It is possible that a solution to your problem
+  either does not exist.} 
+\begin{center}
+  *** Following a terminated task ***
+\end{center}
+IF $\mbox{IERR} < -100$ the user cannot continue the solution of this
+problem. An attempt to do so will result in the users run being
+terminated.
+
+\section{Example} 
+
+Solve the DAE given by
+$$\left[\begin{array}{cc} 0&0\\1&-t \end{array}\right] \dot{x}(t) 
+  = -\left[\begin{array}{cc}1&t\\0&0 \end{array}\right] x(t) +
+  \left[\begin{array}{c}e^{-t}\\0\end{array}\right],\quad t\in [0,1],$$
+which has the characteristic values
+$$\mu = 1, d_{\mu} = 0, a_{\mu} = 2, u_{\mu} = 0.$$
+Since the DAE is equivalent to a purely algebraic equation, there is
+no freedom in the choice of consistent initial values and the
+unique solution is
+$$x(t) = \left[\begin{array}{c}(1+t)e^{-t}\\e^{-t}\end{array}\right].$$
+
+\subsection{Program Text}
+
+\begin{verbatim}
+C     DEMO: Demonstration program for DGELDA.
+C
+C     The problem is a 2x2 strangeness index 1 DAE wich is equivalent
+C     to a purely algebraic equation.
+C
+C     REVISIONS
+C
+C     1995, July 14 (W. Rath).
+C
+C     *****************************************************************
+C
+C     .. Parameters ..
+      INTEGER          NEQ, LRW, LIW
+      PARAMETER        (NEQ =2, LRW = 5000, LIW = 100)
+      INTEGER          KPRINT
+      PARAMETER        (KPRINT = 3)
+      INTEGER          LUN
+      PARAMETER        (LUN = 6)
+      INTEGER          NOUT
+      PARAMETER        (NOUT = 10)
+      DOUBLE PRECISION TSTART
+      PARAMETER        (TSTART = 0.0D0)
+C     .. Local Scalars ..
+      DOUBLE PRECISION DSEC, ERO, HU, T, TOUT
+      INTEGER          I, IDID, IOUT, IWARN, METHOD, NFE, NJE, NQU, NST
+C     .. Local Arrays ..
+      DOUBLE PRECISION ATOL(1), DTOUT(NOUT), ERROR(NEQ), RPAR(1),
+     $                 RTOL(1), RWORK(LRW), X(NEQ), XPRIME(NEQ)
+      INTEGER          CVAL(4), INFO(20), IPAR(1), IWORK(LIW)
+C     .. External Functions ..
+      DOUBLE PRECISION DNRM2, DSECND
+      EXTERNAL         DNRM2, DSECND
+      EXTERNAL         EDIF, ADIF, FDIF
+C     .. Data Statements ..
+      DATA             DTOUT / 0.1D0, 0.2D0, 0.3D0, 0.4D0, 0.5D0,
+     $                         0.6D0, 0.7D0, 0.8D0, 0.9D0, 1.0D0 /
+C     .. Executable Statements ..
+C
+C     First, we have to choose between BDF and RK method.
+C
+   1  PRINT *,'Choose method: (1 = BDF, 2 = RK)'
+      READ *, METHOD
+      IF (METHOD .LT. 1 .OR. METHOD .GT. 2) THEN
+         PRINT *,'ERROR: Method out of range !!'
+         PRINT *,'Try again'
+         GOTO 1
+      ENDIF
+C
+C     Set the INFO array to tell the code how to solve the problem.
+C     We use the standard setup by setting all entries to zero.
+C
+      DO 10 I=1,20
+         INFO(I) = 0
+  10  CONTINUE
+C
+C     Set the starting time and the initial values.
+C     Note, that we choose inconsistent initial values.
+C
+      T = TSTART
+      X(1)=0.0D0
+      X(2)=0.0D0
+C
+C     Now we have to set the tolerances for DGELDA to indicate how
+C     accurate we want the solution to be computed.
+C     In this case we use a combined error test with the same absolute
+C     and relative tolerance.
+C
+      ATOL(1) = 1.0D-5
+      RTOL(1) = 1.0D-5
+C
+C     Write some information about the problem to be solved.
+C
+      IF (KPRINT .GE. 2) THEN
+         WRITE (LUN,100) NEQ,RTOL,ATOL,METHOD
+      ENDIF
+C
+ 100  FORMAT(/1X,' DEMONSTRATION PROGRAM FOR DGELDA',///
+     $     1X,' PROBLEM 1 FROM P. KUNKEL AND V. MEHRMANN,',/
+     $     1X,' A NEW CLASS OF DISCRETIZATION METHODS FOR THE',/
+     $     1X,' SOLUTION OF LINEAR DIFFERENTIAL-ALGEBRAIC EQUATIONS:',//
+     $     1X,' NEQ =',I3,   /1X,' RTOL =',E10.1,'   ATOL =',E10.1,/
+     $     1X,' METHOD =',I3,' (1 = BDF, 2 = RK, -1 = DASSL)')
+C
+C     Before we solve the problem, we compute the characteristic values
+C     of the DAE and consistent initial values by setting TOUT = T and
+C     calling DGELDA.
+C
+      TOUT = T
+      CALL DGELDA(EDIF,ADIF,FDIF,
+     $     NEQ, T, TOUT, X, XPRIME, CVAL,
+     $     IPAR, RPAR, IWORK, LIW, RWORK, LRW,
+     $     RTOL, ATOL, METHOD, INFO, IWARN, IDID)
+      IF (IDID.LT.0) THEN
+         CALL DGEERM(EDIF,ADIF,FDIF,
+     $               NEQ, T, TOUT, X, XPRIME, CVAL,
+     $               IPAR, RPAR, IWORK, LIW, RWORK, LRW,
+     $               RTOL, ATOL, METHOD, INFO, IWARN, IDID)
+         STOP
+      ENDIF
+C
+C     Now we can print some statistics about the characteristic values
+C     of the DAE and the computed consistent values.
+C
+C
+      IF (KPRINT .GT. 2) THEN
+         WRITE (LUN,115) (CVAL(I),I=1,4)
+         WRITE (LUN,116) (X(I),I=1,NEQ)
+      ENDIF
+C
+ 115  FORMAT(//' PROBLEM DESCRIPTION'/
+     $     '   STRANGENESS INDEX   ',I2,4X,
+     $     '   DIFFERENTIAL COMPONENTS   ',I2/29X,
+     $     '   ALGEBRAIC    COMPONENTS   ',I2/29X,
+     $     '   UNDETERMINED COMPONENTS   ',I2/)
+ 116  FORMAT(' CORRECTED INITIAL VALUES'/(' ',6E12.4/))
+C
+C     The next step is to solve the problem.
+C     We will use DGELDA to compute NOUT intermediate solutions from
+C     DTOUT(1) to DTOUT(10) (see above).
+C
+C     For each intermediate solution the weighted error is computed and
+C     some statistics are displayed, where
+C     T    is the actual time,
+C     X(1) is the computed first solution component at time T,
+C     ERO  is the actual weighted error,
+C     ORD  is the order of the BDF method used in the last step (if METHOD=1),
+C     H    is the stepsize used in the last step.
+C
+      IF (KPRINT .GT. 2) THEN
+         WRITE (LUN,110)
+      ENDIF
+C
+ 110  FORMAT(///
+     $     10X,'T',14X,'X(1)',12X,'ERO',8X,'ORD',8X,'H'/)
+      DSEC = DSECND()
+      DO 200 IOUT = 1,NOUT
+         TOUT = DTOUT(IOUT)
+ 120     CALL DGELDA(EDIF,ADIF,FDIF,
+     $        NEQ, T, TOUT, X, XPRIME, CVAL,
+     $        IPAR, RPAR, IWORK, LIW, RWORK, LRW,
+     $        RTOL, ATOL, METHOD, INFO, IWARN, IDID)
+         IF (IDID.LT.0) THEN
+            CALL DGEERM(EDIF,ADIF,FDIF,
+     $        NEQ, T, TOUT, X, XPRIME, CVAL,
+     $        IPAR, RPAR, IWORK, LIW, RWORK, LRW,
+     $        RTOL, ATOL, METHOD, INFO, IWARN, IDID)
+            STOP
+         ENDIF
+         ERROR(1) = ((1+t)*EXP(-t) - X(1))
+     $              /(ABS((1+t)*EXP(-t))+1)
+         ERROR(2) = (EXP(-t) - X(2))
+     $              /(EXP(-t)+1)
+         ERO = DMAX1(ERO,DNRM2(NEQ,ERROR,1)/SQRT(FLOAT(NEQ)))
+         HU = RWORK(7)
+         NQU = IWORK(8)
+         IF (KPRINT .GT. 2) THEN
+            WRITE (LUN,130)
+     $           T,X(1),DNRM2(NEQ,ERROR,1)/SQRT(FLOAT(NEQ)),NQU,HU
+         ENDIF
+C
+ 130     FORMAT(1X,E15.5,E16.5,E16.5,I6,E14.3)
+C
+ 200  CONTINUE
+C
+C     Finally, we display some final statistics
+C
+      DSEC = DSECND()-DSEC
+      NST = IWORK(11)
+      NFE = IWORK(12)
+      NJE = IWORK(13)
+      IF (KPRINT .GT. 2) THEN
+         WRITE (LUN,210) NST,NFE,NJE,IWORK(14),ERO,DSEC
+      ENDIF
+C
+ 210  FORMAT(//1X,' FINAL STATISTICS FOR THIS RUN..',/
+     $     1X,' NUMBER OF STEPS               =',I5/
+     $     1X,' NUMBER OF EVALUATIONS         =',I5/
+     $     1X,' NUMBER OF FACTORIZATIONS      =',I5/
+     $     1X,' NUMBER OF ERROR TEST FAILURES =',I5/
+     $     1X,' MAX ERROR                     =',E10.2/
+     $     1X,' RUNTIME                       =',E10.2)
+C
+      STOP
+      END
+      SUBROUTINE EDIF(N,T,IDIF,E,LDE,IPAR,RPAR,IERR)
+C
+C     ARGUMENT LIST
+C
+C        ARGUMENTS IN
+C
+C             N - INTEGER.
+C             T - DOUBLE PRECISION.
+C          IDIF - INTEGER.
+C           LDE - INTEGER.
+C                 The leading dimension of array E as declared in the
+C                 calling program.
+C                 LDE .GE. N
+C
+C        ARGUMENTS OUT
+C
+C             E - DOUBLE PRECISION array of DIMENSION (LDE,N).
+C                 The leading N by N part of this array contains the
+C                 IDIF-th derivative of E(t) at time T.
+C
+C        ERROR INDICATOR
+C
+C          IERR - INTEGER.
+C                 Unless the routine detects an error (see next section),
+C                 IERR contains 0 on exit.
+C
+C        WARNINGS AND ERRORS DETECTED BY THE ROUTINE
+C
+C        IERR = -1 : Failed to compute the IDIF-th derivative.
+C        IERR = -2 : On entry, IDIF is larger than the highest
+C                    derivative of E(t) the subroutine provides
+C
+C     REVISIONS
+C
+C     1995, July 14 (W. Rath).
+C
+C     *****************************************************************
+C
+C     .. Scalar Arguments ..
+      DOUBLE PRECISION T, RPAR
+      INTEGER          IDIF, IERR, IPAR, LDE, N
+C     .. Array Arguments ..
+      DOUBLE PRECISION E(LDE,*)
+C     .. Local Scalars ..
+      INTEGER          I, J
+C     .. Executable Statements ..
+      IERR = 0
+      DO 110 I=1,N
+        DO 100 J=1,N
+           E(I,J)=0.0D0
+ 100    CONTINUE
+ 110  CONTINUE
+      IF (IDIF .EQ. 0) THEN
+         E(2,1)=1.0D0
+         E(2,2)=-T
+      ELSEIF (IDIF .EQ. 1) THEN
+         E(2,2)=-1.0D0
+      ENDIF
+      RETURN
+C *** Last line of EDIF ***
+      END
+      SUBROUTINE ADIF(N,T,IDIF,A,LDA,IPAR,RPAR,IERR)
+C
+C     ARGUMENT LIST
+C
+C        ARGUMENTS IN
+C
+C             N - INTEGER.
+C             T - DOUBLE PRECISION.
+C          IDIF - INTEGER.
+C           LDA - INTEGER.
+C                 The leading dimension of array A as declared in the
+C                 calling program.
+C                 LDA .GE. N
+C
+C        ARGUMENTS OUT
+C
+C             A - DOUBLE PRECISION array of DIMENSION (N,N).
+C                 The leading N by N part of this array contains the
+C                 IDIF-th derivative of A(t) at time T.
+C
+C        ERROR INDICATOR
+C
+C          IERR - INTEGER.
+C                 Unless the routine detects an error (see next section),
+C                 IERR contains 0 on exit.
+C
+C        WARNINGS AND ERRORS DETECTED BY THE ROUTINE
+C
+C        IERR = -1 : Failed to compute the IDIF-th derivative.
+C        IERR = -2 : On entry, IDIF is larger than the highest
+C                    derivative of E(t) the subroutine provides
+C
+C     REVISIONS
+C
+C     1995, July 14 (W. Rath).
+C
+C     *****************************************************************
+C
+C     .. Scalar Arguments ..
+      DOUBLE PRECISION RPAR, T
+      INTEGER          IDIF, IERR, IPAR, LDA, N
+C     .. Array Arguments ..
+      DOUBLE PRECISION A(LDA,*)
+C     .. Local Scalars ..
+      INTEGER          I, J
+C     .. Executable Statements ..
+      IERR = 0
+      DO 110 I=1,N
+         DO 100 J=1,N
+            A(I,J)=0.D0
+ 100     CONTINUE
+ 110  CONTINUE
+      IF (IDIF .EQ. 0) THEN
+         A(1,1)=-1.0D0
+         A(1,2)=T
+      ELSEIF (IDIF .EQ. 1) THEN
+         A(1,2)=1.0D0
+      ENDIF
+      RETURN
+C *** Last line of ADIF ***
+      END
+      SUBROUTINE FDIF(N,T,IDIF,F,IPAR,RPAR,IERR)
+C
+C     ARGUMENT LIST
+C
+C        ARGUMENTS IN
+C
+C             N - INTEGER.
+C             T - DOUBLE PRECISION.
+C          IDIF - INTEGER.
+C
+C        ARGUMENTS OUT
+C
+C             F - DOUBLE PRECISION array of DIMENSION N.
+C                 The first N components of this array contain the
+C                 IDIF-th derivative of f(t) at time T.
+C
+C        ERROR INDICATOR
+C
+C          IERR - INTEGER.
+C                 Unless the routine detects an error (see next section),
+C                 IERR contains 0 on exit.
+C
+C        WARNINGS AND ERRORS DETECTED BY THE ROUTINE
+C
+C        IERR = -1 : Failed to compute the IDIF-th derivative.
+C        IERR = -2 : On entry, IDIF is larger than the highest
+C                    derivative of f(t) the subroutine provides
+C
+C     REVISIONS
+C
+C     1995, July 14 (W. Rath).
+C
+C     *****************************************************************
+C
+C     .. Scalar Arguments ..
+      DOUBLE PRECISION T, RPAR
+      INTEGER          IDIF, IERR, IPAR, N
+C     .. Local Scalars ..
+      INTEGER          I
+C     .. Local Arrays ..
+      DOUBLE PRECISION F(*)
+C     .. Executable Statements ..
+      IERR = 0
+      DO 100 I=1,N
+         F(I)=0.0D0
+ 100  CONTINUE
+      IF (IDIF .EQ. 0 .OR. IDIF .EQ. 2) THEN
+         F(1)=DEXP(-T)
+      ELSEIF (IDIF .EQ. 1 .OR. IDIF .EQ. 3) THEN
+         F(1)=-DEXP(-T)
+      ELSE
+         IERR = 1
+      ENDIF
+      RETURN
+C *** Last line of SUBROUTINE FDIF ***
+      END
+\end{verbatim}
+
+\subsection{Program Data}
+
+None. Just choose the BDF Method to produce the output below.
+
+\subsection{Program Results}
+
+\begin{verbatim}
+ Choose method: (1 = BDF, 2 = RK)
+
+  DEMONSTRATION PROGRAM FOR DGELDA
+
+
+  PROBLEM 1 FROM P. KUNKEL AND V. MEHRMANN,
+  A NEW CLASS OF DISCRETIZATION METHODS FOR THE
+  SOLUTION OF LINEAR DIFFERENTIAL-ALGEBRAIC EQUATIONS:
+
+  NEQ =  2
+  RTOL =    .1E-04   ATOL =    .1E-04
+  METHOD =  1 (1 = BDF, 2 = RK, -1 = DASSL)
+
+
+ PROBLEM DESCRIPTION
+   STRANGENESS INDEX    1       DIFFERENTIAL COMPONENTS    0
+                                ALGEBRAIC    COMPONENTS    2
+                                UNDETERMINED COMPONENTS    0
+
+ CORRECTED INITIAL VALUES
+    .1000E+01   .1000E+01
+
+
+
+          T              X(1)            ERO        ORD        H
+
+      .10000E+00      .99532E+00      .32666E-06     2      .221E-01
+      .20000E+00      .98248E+00      .56019E-07     3      .441E-01
+      .30000E+00      .96306E+00      .47098E-07     3      .441E-01
+      .40000E+00      .93845E+00      .42896E-07     4      .882E-01
+      .50000E+00      .90980E+00      .66114E-07     4      .882E-01
+      .60000E+00      .87810E+00      .95496E-08     4      .882E-01
+      .70000E+00      .84420E+00      .26370E-07     4      .882E-01
+      .80000E+00      .80879E+00      .52990E-07     4      .882E-01
+      .90000E+00      .77248E+00      .16541E-07     5      .176E+00
+      .10000E+01      .73576E+00      .86802E-07     5      .176E+00
+
+
+  FINAL STATISTICS FOR THIS RUN..
+  NUMBER OF STEPS               =   28
+  NUMBER OF EVALUATIONS         =   29
+  NUMBER OF FACTORIZATIONS      =   29
+  NUMBER OF ERROR TEST FAILURES =    1
+  MAX ERROR                     =   .33E-06
+  RUNTIME                       =   .11E+00
+\end{verbatim}
+
+\end{document}
+% Local Variables: 
+% mode: latex
+% TeX-master: t
+% End: 
+
+
+
+
+
